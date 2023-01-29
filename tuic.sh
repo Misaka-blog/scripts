@@ -78,7 +78,7 @@ insttuic(){
     fi
     ${PACKAGE_INSTALL} wget curl sudo
 
-    wget https://purge.jsdelivr.net/gh/Misaka-blog/tuic-script/files/tuic-latest-linux-$(archAffix) -O /usr/local/bin/tuic
+    wget https://cdn.jsdelivr.net/gh/Misaka-blog/tuic-script/files/tuic-latest-linux-$(archAffix) -O /usr/local/bin/tuic
     if [[ -f "/usr/local/bin/tuic" ]]; then
         chmod +x /usr/local/bin/tuic
     else
@@ -108,7 +108,7 @@ insttuic(){
             domain=$(cat /root/ca.log)
             green "检测到原有域名：$domain 的证书，正在应用"
         else
-            read -p "请输入需要申请证书的域名："
+            read -p "请输入需要申请证书的域名：" domain
             [[ -z $domain ]] && red "未输入域名，无法执行操作！" && exit 1
             green "已输入的域名：$domain" && sleep 1
             domainIP=$(curl -sm8 ipget.net/?ip="${domain}")
@@ -137,12 +137,12 @@ insttuic(){
         fi
     fi
 
-    read -p "\n设置tuic端口[1-65535]（回车则随机分配端口）：" port
+    read -p "设置tuic端口[1-65535]（回车则随机分配端口）：" port
     [[ -z $port ]] && port=$(shuf -i 2000-65535 -n 1)
     until [[ -z $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$port") ]]; do
         if [[ -n $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$port") ]]; then
             echo -e "${RED} $port ${PLAIN} 端口已经被其他程序占用，请更换端口重试！"
-            read -p "\n设置tuic端口[1-65535]（回车则随机分配端口）：" port
+            read -p "设置tuic端口[1-65535]（回车则随机分配端口）：" port
             [[ -z $port ]] && port=$(shuf -i 2000-65535 -n 1)
         fi
     done
@@ -201,7 +201,7 @@ EOF
     cat << EOF >/etc/systemd/system/tuic.service
 [Unit]
 Description=tuic Service
-Documentation=https://gitlab.com/rwkgyg/tuic-yg
+Documentation=https://github.com/Misaka-blog/tuic-script
 After=network.target
 [Service]
 User=root
@@ -226,12 +226,12 @@ EOF
         red "tuic服务启动失败，请运行systemctl status tuic查看服务状态并反馈，脚本退出" && exit 1
     fi
     red "======================================================================================"
-    url="tuic://$domain:$port?password=$token&alpn=h3&mode=bbr#tuic-ios-ygkkk"
+    url="tuic://$domain:$port?password=$token&alpn=h3&mode=bbr#tuic-misaka"
     echo ${url} > /root/tuic/URL.txt
-    green "\ntuic代理服务安装完成"
-    yellow "v2rayn客户端配置文件v2rayn.json内容如下，并保存到 /root/tuic/v2rayn.json\n"
+    green "Tuic 代理服务安装完成"
+    yellow "v2rayn客户端配置文件v2rayn.json内容如下，并保存到 /root/tuic/v2rayn.json"
     cat /root/tuic/v2rayn.json
-    yellow "\ntuic节点配置明文如下，并保存到 /root/tuic/tuic.txt"
+    yellow "Tuic节点配置明文如下，并保存到 /root/tuic/tuic.txt"
     cat /root/tuic/tuic.txt
 }
 
@@ -241,6 +241,71 @@ unsttuic(){
     rm -f /etc/systemd/system/tuic.service /root/tuic.sh
     rm -rf /usr/local/bin/tuic /etc/tuic /root/tuic
     green "Tuic 已彻底卸载完成！"
+}
+
+starttuic(){
+    systemctl start tuic
+    systemctl enable tuic >/dev/null 2>&1
+}
+
+stoptuic(){
+    systemctl stop tuic
+    systemctl disable tuic >/dev/null 2>&1
+}
+
+tuicswitch(){
+    echo ""
+    yellow "请选择你需要的操作："
+    echo ""
+    echo -e " ${GREEN}1.${PLAIN} 启动 Tuic"
+    echo -e " ${GREEN}2.${PLAIN} 关闭 Tuic"
+    echo -e " ${GREEN}3.${PLAIN} 重启 Tuic"
+    echo ""
+    read -rp "请输入选项 [0-3]: " switchInput
+    case $switchInput in
+        1 ) starttuic ;;
+        2 ) stoptuic ;;
+        3 ) stoptuic && starttuic ;;
+        * ) exit 1 ;;
+    esac
+}
+
+changeport(){
+    oldport=$(cat /etc/tuic/tuic.json 2>/dev/null | sed -n 2p | awk '{print $2}'| tr -d ',')
+    read -p "设置tuic端口[1-65535]（回车则随机分配端口）：" port
+    [[ -z $port ]] && port=$(shuf -i 2000-65535 -n 1)
+    until [[ -z $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$port") ]]; do
+        if [[ -n $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$port") ]]; then
+            echo -e "${RED} $port ${PLAIN} 端口已经被其他程序占用，请更换端口重试！"
+            read -p "设置tuic端口[1-65535]（回车则随机分配端口）：" port
+            [[ -z $port ]] && port=$(shuf -i 2000-65535 -n 1)
+        fi
+    done
+    sed -i "2s/$oldport/$port/g" /etc/tuic/tuic.json
+    sed -i "4s/$oldport/$port/g" /root/tuic/v2rayn.json
+    sed -i "4s/$oldport/$port/g" /root/tuic/tuic.txt
+}
+
+changetoken(){
+    oldtoken=$(cat /etc/tuic/tuic.json 2>/dev/null | sed -n 3p | awk '{print $2}' | tr -d ',[]"')
+    read -p "设置tuic Token（回车跳过为随机字符）：" token
+    [[ -z $token ]] && token=$(date +%s%N | md5sum | cut -c 1-8)
+    sed -i "3s/$oldtoken/$token/g" /etc/tuic/tuic.json
+    sed -i "5s/$oldtoken/$token/g" /root/tuic/v2rayn.json
+    sed -i "5s/$oldtoken/$token/g" /root/tuic/tuic.txt
+}
+
+changeconf(){
+    green "Tuic配置变更选择如下:"
+    echo -e " ${GREEN}1.${PLAIN} 修改端口"
+    echo -e " ${GREEN}2.${PLAIN} 修改Token"
+}
+
+showconf(){
+    yellow "v2rayn客户端配置文件v2rayn.json内容如下，并保存到 /root/tuic/v2rayn.json"
+    cat /root/tuic/v2rayn.json
+    yellow "Tuic节点配置明文如下，并保存到 /root/tuic/tuic.txt"
+    cat /root/tuic/tuic.txt
 }
 
 menu() {
@@ -268,6 +333,7 @@ menu() {
     case $menuInput in
         1 ) insttuic ;;
         2 ) unsttuic ;;
+        5 ) showconf ;;
         * ) exit 1 ;;
     esac
 }
