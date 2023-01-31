@@ -85,9 +85,7 @@ insttuic(){
         red "Tuic 内核安装失败！"
         exit 1
     fi
-
-    certpath=""
-    keypath=""
+    
     green "Tuic 协议证书申请方式如下："
     echo ""
     echo -e " ${GREEN}1.${PLAIN} 脚本自动申请 ${YELLOW}（默认）${PLAIN}"
