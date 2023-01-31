@@ -43,7 +43,7 @@ done
 
 virt=$(systemd-detect-virt)
 
-install_cert(){
+inst_cert(){
     green "Hysteria 协议证书申请方式如下："
     echo ""
     echo -e " ${GREEN}1.${PLAIN} 必应自签证书 ${YELLOW}（默认）${PLAIN}"
@@ -99,6 +99,43 @@ install_cert(){
     fi
 }
 
+protocol(){
+    green "Hysteria 协议如下："
+    echo ""
+    echo -e " ${GREEN}1.${PLAIN} UDP ${YELLOW}（默认）${PLAIN}"
+    echo -e " ${GREEN}2.${PLAIN} wechat-video"
+    echo -e " ${GREEN}3.${PLAIN} faketcp"
+    echo ""
+    read -rp "请输入选项 [1-3]: " protocolInput
+    if [[ $protocolInput == 2 ]]; then
+        hyprotocol="wechat-video"
+    elif [[ $protocolInput == 3 ]]; then
+        hyprotocol="faketcp"
+    else
+        hyprotocol="udp"
+    fi
+}
+
+inst_port(){
+    read -rp "设置hysteria转发主端口[1-65535]（回车以使用随机端口）：" port
+    [[ -z $port ]] && port=$(shuf -i 2000-65535 -n 1)
+    until [[ -z $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$port") ]]; do
+        if [[ -n $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$port") ]]; then
+            echo -e "${RED} $port ${PLAIN} 端口已经被其他程序占用，请更换端口重试！"
+            read -rp "设置hysteria转发主端口[1-65535]（回车以使用随机端口）：" port
+            [[ -z $port ]] && port=$(shuf -i 2000-65535 -n 1)
+        fi
+    done
+
+    if [[ $hyprotocol == "udp" ]]; then
+        yellow "当前使用的是UDP协议，可支持端口跳跃功能"
+        green "请输入选项："
+        echo -e " ${GREEN}1.${PLAIN} 使用单端口 ${YELLOW}（默认）${PLAIN}"
+        echo -e " ${GREEN}2.${PLAIN} 使用端口跳跃"
+        read -rp "请输入选项 [1-2]: " portJumpInput
+    fi
+}
+
 install_hysteria(){
     systemctl stop hysteria-server
     systemctl disable hysteria-server
@@ -113,7 +150,9 @@ install_hysteria(){
         sysctl -p
     fi
 
-    install_cert
+    inst_cert
+    protocol
+    inst_port
 }
 
 menu() {
