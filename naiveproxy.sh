@@ -74,6 +74,8 @@ installProxy(){
     [[ -z $proxyname ]] && proxyname=$(date +%s%N | md5sum | cut -c 1-8)
     read -rp "请输入NaiveProxy的密码 [默认随机生成]：" proxypwd
     [[ -z $proxypwd ]] && proxypwd=$(date +%s%N | md5sum | cut -c 1-16)
+    read -rp "请输入NaiveProxy的伪装网站地址 （去除https://） [默认世嘉maimai日本网站]：" proxysite
+    [[ -z $proxysite ]] && proxysite="maimai.sega.jp"
     
     cat << EOF >/etc/caddy/Caddyfile
 :443, $domain
@@ -85,7 +87,7 @@ route {
    hide_via
    probe_resistance
   }
- reverse_proxy  https://maimai.sega.jp  {
+ reverse_proxy  https://$proxysite  {
    header_up  Host  {upstream_hostport}
    header_up  X-Forwarded-Host  {host}
   }
