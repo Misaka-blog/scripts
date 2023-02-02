@@ -70,14 +70,15 @@ installProxy(){
     mkdir /etc/caddy
     
     read -rp "请输入需要用在NaiveProxy的端口 [回车随机分配端口]：" proxyport
-    [[ -z $port ]] && port=$(shuf -i 2000-65535 -n 1)
-    until [[ -z $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$port") ]]; do
-        if [[ -n $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$port") ]]; then
-            echo -e "${RED} $port ${PLAIN} 端口已经被其他程序占用，请更换端口重试！"
+    [[ -z $proxyport ]] && port=$(shuf -i 2000-65535 -n 1)
+    until [[ -z $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$proxyport") ]]; do
+        if [[ -n $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$proxyport") ]]; then
+            echo -e "${RED} $proxyport ${PLAIN} 端口已经被其他程序占用，请更换端口重试！"
             read -rp "请输入需要用在NaiveProxy的端口 [回车随机分配端口]：" proxyport
-            [[ -z $port ]] && port=$(shuf -i 2000-65535 -n 1)
+            [[ -z $proxyport ]] && proxyport=$(shuf -i 2000-65535 -n 1)
         fi
     done
+    yellow "将在NaiveProxy使用的端口是：$proxyport"
     read -rp "请输入需要使用在NaiveProxy的域名：" domain
     read -rp "请输入NaiveProxy的用户名 [回车随机生成]：" proxyname
     [[ -z $proxyname ]] && proxyname=$(date +%s%N | md5sum | cut -c 1-8)
@@ -102,17 +103,16 @@ route {
   }
 }
 EOF
-
-    cat <<EOF > /root/naive-client.json
+    mkdir /root/naive
+    cat <<EOF > /root/naive/naive-client.json
 {
   "listen": "socks://127.0.0.1:1080",
-  "proxy": "https://${proxyname}:${proxypwd}@${domain}",
+  "proxy": "https://${proxyname}:${proxypwd}@${domain}:${proxyport}",
   "log": ""
 }
 EOF
-
-    url="naive+https://${proxyname}:${proxypwd}@${domain}:443?padding=true#Naive"
-    echo $url > /root/naive-url.txt
+    url="naive+https://${proxyname}:${proxypwd}@${domain}:${proxyport}?padding=true#Naive"
+    echo $url > /root/naive/naive-url.txt
     
     cat << EOF >/etc/systemd/system/caddy.service
 [Unit]
@@ -139,8 +139,8 @@ EOF
     systemctl start caddy
 
     green "NaiveProxy 已安装成功！"
-    yellow "客户端配置文件已保存至 /root/naive-client.json"
-    yellow "Qv2ray / SagerNet / Matsuri 分享链接已保存至 /root/naive-url.txt"
+    yellow "客户端配置文件已保存至 /root/naive/naive-client.json"
+    yellow "Qv2ray / SagerNet / Matsuri 分享链接已保存至 /root/naive/naive-url.txt"
     yellow "SagerNet / Matsuri 分享二维码如下："
     qrencode -o - -t ANSIUTF8 "$url"
 }
