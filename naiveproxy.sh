@@ -70,7 +70,7 @@ installProxy(){
     mkdir /etc/caddy
     
     read -rp "请输入需要用在NaiveProxy的端口 [回车随机分配端口]：" proxyport
-    [[ -z $proxyport ]] && port=$(shuf -i 2000-65535 -n 1)
+    [[ -z $proxyport ]] && proxyport=$(shuf -i 2000-65535 -n 1)
     until [[ -z $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$proxyport") ]]; do
         if [[ -n $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$proxyport") ]]; then
             echo -e "${RED} $proxyport ${PLAIN} 端口已经被其他程序占用，请更换端口重试！"
