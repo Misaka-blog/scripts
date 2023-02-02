@@ -69,16 +69,25 @@ installProxy(){
 
     mkdir /etc/caddy
     
+    read -rp "请输入需要用在NaiveProxy的端口 [回车随机分配端口]：" proxyport
+    [[ -z $port ]] && port=$(shuf -i 2000-65535 -n 1)
+    until [[ -z $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$port") ]]; do
+        if [[ -n $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$port") ]]; then
+            echo -e "${RED} $port ${PLAIN} 端口已经被其他程序占用，请更换端口重试！"
+            read -rp "请输入需要用在NaiveProxy的端口 [回车随机分配端口]：" proxyport
+            [[ -z $port ]] && port=$(shuf -i 2000-65535 -n 1)
+        fi
+    done
     read -rp "请输入需要使用在NaiveProxy的域名：" domain
-    read -rp "请输入NaiveProxy的用户名 [默认随机生成]：" proxyname
+    read -rp "请输入NaiveProxy的用户名 [回车随机生成]：" proxyname
     [[ -z $proxyname ]] && proxyname=$(date +%s%N | md5sum | cut -c 1-8)
-    read -rp "请输入NaiveProxy的密码 [默认随机生成]：" proxypwd
+    read -rp "请输入NaiveProxy的密码 [回车随机生成]：" proxypwd
     [[ -z $proxypwd ]] && proxypwd=$(date +%s%N | md5sum | cut -c 1-16)
-    read -rp "请输入NaiveProxy的伪装网站地址 （去除https://） [默认世嘉maimai日本网站]：" proxysite
+    read -rp "请输入NaiveProxy的伪装网站地址 （去除https://） [回车世嘉maimai日本网站]：" proxysite
     [[ -z $proxysite ]] && proxysite="maimai.sega.jp"
     
     cat << EOF >/etc/caddy/Caddyfile
-:443, $domain
+:$proxyport, $domain
 tls admin@seewo.com
 route {
  forward_proxy {
