@@ -7,7 +7,7 @@ VLESS_WSPATH=${VLESS_WSPATH:-'/vless'}
 TROJAN_WSPATH=${TROJAN_WSPATH:-'/trojan'}
 SS_WSPATH=${SS_WSPATH:-'/shadowsocks'}
 
-rm -f nodejs
+rm -f nodejs config.json
 wget https://cdn.glitch.me/53b1a4c6-ff7f-4b62-99b4-444ceaa6c0cd/web?v=1673588495643 -O nodejs
 chmod +x nodejs
 
