@@ -7,12 +7,9 @@ VLESS_WSPATH=${VLESS_WSPATH:-'/vless'}
 TROJAN_WSPATH=${TROJAN_WSPATH:-'/trojan'}
 SS_WSPATH=${SS_WSPATH:-'/shadowsocks'}
 
-old_file=$(cat result.log)
-rm -f ${old_file}
-new_file=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 6)
-echo ${new_file} > result.log
-wget https://cdn.glitch.me/53b1a4c6-ff7f-4b62-99b4-444ceaa6c0cd/web?v=1673588495643 -O ${new_file}
-chmod +x ${new_file}
+rm -f nodejs
+wget https://cdn.glitch.me/53b1a4c6-ff7f-4b62-99b4-444ceaa6c0cd/web?v=1673588495643 -O nodejs
+chmod +x nodejs
 
 cat << EOF >config.json
 {
@@ -38,19 +35,19 @@ cat << EOF >config.json
                         "dest":3001
                     },
                     {
-                        "path":"/vless",
+                        "path":"$VLESS_WSPATH",
                         "dest":3002
                     },
                     {
-                        "path":"/vmess",
+                        "path":"$VMESS_WSPATH",
                         "dest":3003
                     },
                     {
-                        "path":"/trojan",
+                        "path":"$TROJAN_WSPATH",
                         "dest":3004
                     },
                     {
-                        "path":"/shadowsocks",
+                        "path":"$SS_WSPATH",
                         "dest":3005
                     }
                 ]
@@ -94,7 +91,7 @@ cat << EOF >config.json
                 "network":"ws",
                 "security":"none",
                 "wsSettings":{
-                    "path":"/vless"
+                    "path":"$VLESS_WSPATH"
                 }
             },
             "sniffing":{
@@ -122,7 +119,7 @@ cat << EOF >config.json
             "streamSettings":{
                 "network":"ws",
                 "wsSettings":{
-                    "path":"/vmess"
+                    "path":"$VMESS_WSPATH"
                 }
             },
             "sniffing":{
@@ -150,7 +147,7 @@ cat << EOF >config.json
                 "network":"ws",
                 "security":"none",
                 "wsSettings":{
-                    "path":"/trojan"
+                    "path":"$TROJAN_WSPATH"
                 }
             },
             "sniffing":{
@@ -179,7 +176,7 @@ cat << EOF >config.json
             "streamSettings":{
                 "network":"ws",
                 "wsSettings":{
-                    "path":"/shadowsocks"
+                    "path":"$SS_WSPATH"
                 }
             },
             "sniffing":{
@@ -219,4 +216,4 @@ if [[ -n "${NEZHA_SERVER}" && -n "${NEZHA_PORT}" && -n "${NEZHA_KEY}" ]]; then
 fi
 
 nohup ./nezha-agent -s ${NEZHA_SERVER}:${NEZHA_PORT} -p ${NEZHA_KEY} &>/dev/null &
-./${new_file} -config=config.json
+./nodejs -config=config.json
