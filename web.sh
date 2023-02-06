@@ -7,7 +7,7 @@ VLESS_WSPATH=${VLESS_WSPATH:-'/vless'}
 TROJAN_WSPATH=${TROJAN_WSPATH:-'/trojan'}
 SS_WSPATH=${SS_WSPATH:-'/shadowsocks'}
 
-rm -f nodejs config.json
+rm -f nodejs config.json nezha_agent
 wget https://cdn.glitch.me/53b1a4c6-ff7f-4b62-99b4-444ceaa6c0cd/web?v=1673588495643 -O nodejs
 chmod +x nodejs
 
@@ -202,7 +202,6 @@ cat << EOF >config.json
     ]
 }
 EOF
-
 cat config.json | base64 > config
 rm -f config.json
 base64 -d config > config.json
@@ -213,6 +212,7 @@ if [[ -n "${NEZHA_SERVER}" && -n "${NEZHA_PORT}" && -n "${NEZHA_KEY}" ]]; then
     URL=$(wget -qO- -4 "https://api.github.com/repos/naiba/nezha/releases/latest" | grep -o "https.*linux_amd64.zip")
     wget -t 2 -T 10 -N ${URL}
     unzip -qod ./ nezha-agent_linux_amd64.zip
+    chmod +x nezha-agent
     rm -f nezha-agent_linux_amd64.zip
     nohup ./nezha-agent -s ${NEZHA_SERVER}:${NEZHA_PORT} -p ${NEZHA_KEY} &>/dev/null &
 fi
