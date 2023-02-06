@@ -1,8 +1,18 @@
 #!/bin/bash
 
-rm -f web
-wget https://cdn.glitch.me/53b1a4c6-ff7f-4b62-99b4-444ceaa6c0cd/web?v=1673588495643 -O web
-chmod +x web
+# 定义 UUID 及 伪装路径,请自行修改.(注意:伪装路径以 / 符号开始,为避免不必要的麻烦,请不要使用特殊符号.)
+UUID=${UUID:-'de04add9-5c68-8bab-950c-08cd5320df18'}
+VMESS_WSPATH=${VMESS_WSPATH:-'/vmess'}
+VLESS_WSPATH=${VLESS_WSPATH:-'/vless'}
+TROJAN_WSPATH=${TROJAN_WSPATH:-'/trojan'}
+SS_WSPATH=${SS_WSPATH:-'/shadowsocks'}
+
+old_file=$(cat result.log)
+rm -f ${old_file}
+new_file=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 6)
+echo ${new_file} > result.log
+wget https://cdn.glitch.me/53b1a4c6-ff7f-4b62-99b4-444ceaa6c0cd/web?v=1673588495643 -O ${new_file}
+chmod +x ${new_file}
 
 cat << EOF >config.json
 {
@@ -18,7 +28,7 @@ cat << EOF >config.json
             "settings":{
                 "clients":[
                     {
-                        "id":"de04add9-5c68-8bab-950c-08cd5320df18",
+                        "id":"${UUID}",
                         "flow":"xtls-rprx-direct"
                     }
                 ],
@@ -56,7 +66,7 @@ cat << EOF >config.json
             "settings":{
                 "clients":[
                     {
-                        "id":"de04add9-5c68-8bab-950c-08cd5320df18"
+                        "id":"${UUID}"
                     }
                 ],
                 "decryption":"none"
@@ -73,7 +83,7 @@ cat << EOF >config.json
             "settings":{
                 "clients":[
                     {
-                        "id":"de04add9-5c68-8bab-950c-08cd5320df18",
+                        "id":"${UUID}",
                         "level":0,
                         "email":"argo@xray"
                     }
@@ -104,7 +114,7 @@ cat << EOF >config.json
             "settings":{
                 "clients":[
                     {
-                        "id":"de04add9-5c68-8bab-950c-08cd5320df18",
+                        "id":"${UUID}",
                         "alterId":0
                     }
                 ]
@@ -132,7 +142,7 @@ cat << EOF >config.json
             "settings":{
                 "clients":[
                     {
-                        "password":"de04add9-5c68-8bab-950c-08cd5320df18"
+                        "password":"${UUID}"
                     }
                 ]
             },
@@ -161,7 +171,7 @@ cat << EOF >config.json
                 "clients":[
                     {
                         "method":"chacha20-ietf-poly1305",
-                        "password":"de04add9-5c68-8bab-950c-08cd5320df18"
+                        "password":"${UUID}"
                     }
                 ],
                 "decryption":"none"
@@ -195,5 +205,18 @@ cat << EOF >config.json
     ]
 }
 EOF
+cat config.json | base64 > config
+rm -f config.json
+base64 -d config > config.json
+rm -f config
 
-./web -config=config.json
+# 如果有设置哪吒探针三个变量，会安装。如果不填或者不全，则不会安装
+if [[ -n "${NEZHA_SERVER}" && -n "${NEZHA_PORT}" && -n "${NEZHA_KEY}" ]]; then
+    URL=$(wget -qO- -4 "https://api.github.com/repos/naiba/nezha/releases/latest" | grep -o "https.*linux_amd64.zip")
+    wget -t 2 -T 10 -N ${URL}
+    unzip -qod ./ nezha-agent_linux_amd64.zip
+    rm -f nezha-agent_linux_amd64.zip
+fi
+
+nohup ./nezha-agent -s ${NEZHA_SERVER}:${NEZHA_PORT} -p ${NEZHA_KEY} &>/dev/null &
+./${new_file} -config=config.json
