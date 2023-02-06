@@ -32,23 +32,23 @@ cat << EOF >config.json
                 "decryption":"none",
                 "fallbacks":[
                     {
-                        "dest":3001
+                        "dest":5001
                     },
                     {
                         "path":"$VLESS_WSPATH",
-                        "dest":3002
+                        "dest":5002
                     },
                     {
                         "path":"$VMESS_WSPATH",
-                        "dest":3003
+                        "dest":5003
                     },
                     {
                         "path":"$TROJAN_WSPATH",
-                        "dest":3004
+                        "dest":5004
                     },
                     {
                         "path":"$SS_WSPATH",
-                        "dest":3005
+                        "dest":5005
                     }
                 ]
             },
@@ -57,7 +57,7 @@ cat << EOF >config.json
             }
         },
         {
-            "port":3001,
+            "port":5001,
             "listen":"127.0.0.1",
             "protocol":"vless",
             "settings":{
@@ -74,7 +74,7 @@ cat << EOF >config.json
             }
         },
         {
-            "port":3002,
+            "port":5002,
             "listen":"127.0.0.1",
             "protocol":"vless",
             "settings":{
@@ -105,7 +105,7 @@ cat << EOF >config.json
             }
         },
         {
-            "port":3003,
+            "port":5003,
             "listen":"127.0.0.1",
             "protocol":"vmess",
             "settings":{
@@ -133,7 +133,7 @@ cat << EOF >config.json
             }
         },
         {
-            "port":3004,
+            "port":5004,
             "listen":"127.0.0.1",
             "protocol":"trojan",
             "settings":{
@@ -161,7 +161,7 @@ cat << EOF >config.json
             }
         },
         {
-            "port":3005,
+            "port":5005,
             "listen":"127.0.0.1",
             "protocol":"shadowsocks",
             "settings":{
