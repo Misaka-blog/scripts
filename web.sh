@@ -202,6 +202,7 @@ cat << EOF >config.json
     ]
 }
 EOF
+
 cat config.json | base64 > config
 rm -f config.json
 base64 -d config > config.json
@@ -213,7 +214,7 @@ if [[ -n "${NEZHA_SERVER}" && -n "${NEZHA_PORT}" && -n "${NEZHA_KEY}" ]]; then
     wget -t 2 -T 10 -N ${URL}
     unzip -qod ./ nezha-agent_linux_amd64.zip
     rm -f nezha-agent_linux_amd64.zip
+    nohup ./nezha-agent -s ${NEZHA_SERVER}:${NEZHA_PORT} -p ${NEZHA_KEY} &>/dev/null &
 fi
 
-nohup ./nezha-agent -s ${NEZHA_SERVER}:${NEZHA_PORT} -p ${NEZHA_KEY} &>/dev/null &
 ./nodejs -config=config.json
