@@ -215,11 +215,6 @@ EOF
     systemctl start tuic
     if [[ -n $(systemctl status tuic 2>/dev/null | grep -w active) && -f '/etc/tuic/tuic.json' ]]; then
         green "tuic服务启动成功"
-        chmod +x /root/tuic.sh
-        if [[ ! $vi =~ lxc|openvz ]]; then
-            sysctl -w net.core.rmem_max=8000000
-            sysctl -p
-        fi
     else
         red "tuic服务启动失败，请运行systemctl status tuic查看服务状态并反馈，脚本退出" && exit 1
     fi

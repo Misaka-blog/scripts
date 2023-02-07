@@ -41,20 +41,112 @@ done
 
 [[ -z $SYSTEM ]] && red "目前暂不支持你的VPS的操作系统！" && exit 1
 
+archAffix(){
+    case "$(uname -m)" in
+        x86_64 | amd64 ) echo 'amd64' ;;
+        armv8 | arm64 | aarch64 ) echo 'aarch64' ;;
+        * ) red "不支持的CPU架构!" && exit 1 ;;
+    esac
+}
+
 instplayit(){
     if [[ ! $SYSTEM == "CentOS" ]]; then
         ${PACKAGE_UPDATE[int]}
     fi
     ${PACKAGE_INSTALL[int]} curl wget sudo
 
-    last_version=$(curl -s https://data.jsdelivr.com/v1/package/gh/playit-cloud/playit-agent | sed -n 4p | tr -d ',"' | awk '{print $1}')
-    wget https://github.com/playit-cloud/playit-agent/releases/download/v$last_version/playit-cli -O /usr/local/bin/playit
+    if [[ $(archAffix) == "amd64"]]; then
+        wget -O /usr/local/bin/playit https://github.com/playit-cloud/playit-agent/releases/download/v0.9.3/playit-0.9.3
+    else
+        wget -O /usr/local/bin/playit https://github.com/playit-cloud/playit-agent/releases/download/v0.9.3/playit-0.9.3-aarch64
+    fi
+
     if [[ -f "/usr/local/bin/playit" ]]; then
         chmod +x /usr/local/bin/playit
-        green "Playit 隧道程序下载成功，当前版本为 $(playit version)"
+        green "Playit 隧道程序下载成功，当前版本为 $(playit -V)"
     else
         red "下载 Playit 文件失败，请检查本机网络是否链接上GitHub！"
     fi
+
+    yellow "请复制接下来的链接至浏览器，以进行Playit账户登录。登录完成之后按下Ctrl+C退出程序"
+    read -p "按下回车键以继续"
+
+    playit
+
+    clear
+    if [[ -f "./playit.toml" ]]; then
+        green "Playit 账户登录成功，正在安装系统守护"
+    else
+        red "Playit 账户登录失败，请卸载后重试！"
+        exit 1
+    fi
+    
+    mkdir /etc/playit >/dev/null 2>&1
+    mv playit.toml /etc/playit/playit.toml
+    cat << EOF >/etc/systemd/system/playit.service
+[Unit]
+Description=Playit Tunnel Service
+Documentation=https://github.com/Misaka-blog/playit-tunnel
+After=network.target
+[Service]
+User=root
+ExecStart=/usr/local/bin/playit -c /etc/playit/playit.toml
+Restart=on-failure
+RestartSec=10
+LimitNOFILE=infinity
+[Install]
+WantedBy=multi-user.target
+EOF
+    if [[ -n $(systemctl status playit 2>/dev/null | grep -w active) && -f '/etc/playit/playit.toml' ]]; then
+        green "Playit 隧道程序启动成功"
+        yellow "请继续在网页：https://playit.gg/account/overview 设置隧道详细参数"
+    else
+        red "Playit 隧道程序启动失败，请运行systemctl status playit查看服务状态并反馈，脚本退出"
+        exit 1
+    fi
+}
+
+unstplayit(){
+    systemctl stop playit
+    systemctl disable playit
+    rm -f /etc/systemd/system/playit.service /root/playit.sh
+    rm -rf /usr/local/bin/playit /etc/playit
+    green "Playit 隧道程序已彻底卸载完成！"
+}
+
+unstplayit(){
+    systemctl stop playit
+    systemctl disable playit
+    rm -f /etc/systemd/system/playit.service /root/playit.sh
+    rm -rf /usr/local/bin/playit /etc/playit /root/playit
+    green "playit 已彻底卸载完成！"
+}
+
+startplayit(){
+    systemctl start playit
+    systemctl enable playit >/dev/null 2>&1
+}
+
+stopplayit(){
+    systemctl stop playit
+    systemctl disable playit >/dev/null 2>&1
+}
+
+playitswitch(){
+    echo ""
+    yellow "请选择你需要的操作："
+    echo ""
+    echo -e " ${GREEN}1.${PLAIN} 启动 Playit"
+    echo -e " ${GREEN}2.${PLAIN} 关闭 Playit"
+    echo -e " ${GREEN}3.${PLAIN} 重启 Playit"
+    echo ""
+    read -rp "请输入选项 [0-3]: " switchInput
+    case $switchInput in
+        1 ) startplayit ;;
+        2 ) stopplayit ;;
+        3 ) stopplayit && startplayit ;;
+        * ) exit 1 ;;
+    esac
 }
 
 menu() {
@@ -69,15 +161,20 @@ menu() {
     echo -e "# ${GREEN}YouTube 频道${PLAIN}: https://www.youtube.com/@misaka-blog        #"
     echo "#############################################################"
     echo ""
-    echo -e " ${GREEN}1.${PLAIN} 安装 Playit 端口转发"
+    echo -e " ${GREEN}1.${PLAIN} 安装 Playit 隧道程序"
+    echo -e " ${GREEN}2.${PLAIN} ${RED}卸载 Playit 隧道程序${PLAIN}"
+    echo " -------------"
+    echo -e " ${GREEN}3.${PLAIN} 关闭、开启、重启 Playit"
     echo " -------------"
     echo -e " ${GREEN}0.${PLAIN} 退出脚本"
     echo ""
-    read -rp "请输入选项 [0-5]: " menuInput
+    read -rp "请输入选项 [0-2]: " menuInput
     case $menuInput in
-        1 ) insttuic ;;
-        2 ) unsttuic ;;
-        5 ) showconf ;;
+        1 ) instplayit ;;
+        2 ) unstplayit ;;
+        3 ) playitswitch ;;
         * ) exit 1 ;;
     esac
 }
+
+menu
