@@ -292,6 +292,13 @@ changeconf(){
     green "Tuic配置变更选择如下:"
     echo -e " ${GREEN}1.${PLAIN} 修改端口"
     echo -e " ${GREEN}2.${PLAIN} 修改Token"
+    echo ""
+    read -p " 请选择操作[1-2]：" confAnswer
+    case $confAnswer in
+        1 ) changeport ;;
+        2 ) changetoken ;;
+        * ) exit 1 ;;
+    esac
 }
 
 showconf(){
@@ -326,9 +333,10 @@ menu() {
     case $menuInput in
         1 ) insttuic ;;
         2 ) unsttuic ;;
+        3 ) tuicswitch ;;
+        4 ) changeconf ;;
         5 ) showconf ;;
         * ) exit 1 ;;
     esac
 }
-
 menu

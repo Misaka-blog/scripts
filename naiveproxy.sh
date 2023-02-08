@@ -169,6 +169,10 @@ reloadProxy(){
     green "NaiveProxy 已重启成功！"
 }
 
+modifyConfig(){
+    
+}
+
 menu(){
     clear
     echo "#############################################################"
@@ -187,6 +191,8 @@ menu(){
     echo -e "  ${GREEN}3.${PLAIN}  启动 NaiveProxy"
     echo -e "  ${GREEN}4.${PLAIN}  停止 NaiveProxy"
     echo -e "  ${GREEN}5.${PLAIN}  重载 NaiveProxy"
+    echo " -------------"
+    echo -e "  ${GREEN}6.${PLAIN}  修改 NaiveProxy 配置"
     echo " -------------"
     echo -e "  ${GREEN}0.${PLAIN} 退出"
     echo ""
