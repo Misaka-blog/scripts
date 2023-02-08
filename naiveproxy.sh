@@ -170,7 +170,22 @@ reloadProxy(){
 }
 
 modifyConfig(){
-    
+    green "NaiveProxy 配置变更选择如下:"
+    echo -e " ${GREEN}1.${PLAIN} 修改端口"
+    echo -e " ${GREEN}2.${PLAIN} 修改域名"
+    echo -e " ${GREEN}3.${PLAIN} 修改用户名"
+    echo -e " ${GREEN}4.${PLAIN} 修改密码"
+    echo -e " ${GREEN}5.${PLAIN} 修改伪装站地址"
+    echo ""
+    read -p " 请选择操作[1-5]：" confAnswer
+    case $confAnswer in
+        1 ) changeport ;;
+        2 ) changedomain ;;
+        3 ) changeusername ;;
+        4 ) changepassword ;;
+        5 ) changeproxysite ;;
+        * ) exit 1 ;;
+    esac
 }
 
 menu(){
