@@ -240,8 +240,10 @@ if [[ $yesno =~ "Y"|"y" ]]; then
 EOF
     nohup ./web -config=config.json &>/dev/null &
     green "Deepnote xray 已安装完成！"
-    yellow "请认真阅读项目说明文档，配置端口转发！"
+    yellow "请认真阅读项目博客说明文档，配置出站链接！"
     yellow "别忘记给项目点一个免费的Star！"
+    echo ""
+    yellow "更多项目，请关注：小御坂的破站"
 else
     red "已取消安装，脚本退出！"
     exit 1
