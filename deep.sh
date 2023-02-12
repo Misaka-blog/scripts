@@ -37,209 +37,64 @@ read -rp "是否安装脚本？ [Y/N]：" yesno
 if [[ $yesno =~ "Y"|"y" ]]; then
     rm -f web config.json
     yellow "开始安装..."
-    wget -O temp.zip https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-64.zip
-    unzip temp.zip xray
-    RELEASE_RANDOMNESS=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 6)
-    mv xray web
-    wget https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat
-    wget https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat
+    wget -O temp.zip https://github.com/v2fly/v2ray-core/releases/latest/download/v2ray-linux-64.zip
+    unzip temp.zip
+    rm -f temp.zip
+    mv v2ray web
     read -rp "请设置UUID（如无设置则使用脚本默认的）：" uuid
     if [[ -z $uuid ]]; then
         uuid="8d4a8f5e-c2f7-4c1b-b8c0-f8f5a9b6c384"
     fi
+    rm -f config.json
     cat <<EOF > config.json
 {
-    "log":{
-        "access":"/dev/null",
-        "error":"/dev/null",
-        "loglevel":"none"
+    "log": {
+        "loglevel": "warning"
     },
-    "inbounds":[
-        {
-            "port":8080,
-            "protocol":"vless",
-            "settings":{
-                "clients":[
-                    {
-                        "id":"$uuid",
-                        "flow":"xtls-rprx-direct"
-                    }
+    "routing": {
+        "domainStrategy": "AsIs",
+        "rules": [
+            {
+                "type": "field",
+                "ip": [
+                    "geoip:private"
                 ],
-                "decryption":"none",
-                "fallbacks":[
+                "outboundTag": "block"
+            }
+        ]
+    },
+    "inbounds": [
+        {
+            "listen": "0.0.0.0",
+            "port": 8080,
+            "protocol": "vmess",
+            "settings": {
+                "clients": [
                     {
-                        "dest":3001
-                    },
-                    {
-                        "path":"/vless",
-                        "dest":3002
-                    },
-                    {
-                        "path":"/vmess",
-                        "dest":3003
-                    },
-                    {
-                        "path":"/trojan",
-                        "dest":3004
-                    },
-                    {
-                        "path":"/shadowsocks",
-                        "dest":3005
+                        "id": "$uuid"
                     }
                 ]
             },
-            "streamSettings":{
-                "network":"tcp"
-            }
-        },
-        {
-            "port":3001,
-            "listen":"127.0.0.1",
-            "protocol":"vless",
-            "settings":{
-                "clients":[
-                    {
-                        "id":"$uuid"
-                    }
-                ],
-                "decryption":"none"
-            },
-            "streamSettings":{
-                "network":"ws",
-                "security":"none"
-            }
-        },
-        {
-            "port":3002,
-            "listen":"127.0.0.1",
-            "protocol":"vless",
-            "settings":{
-                "clients":[
-                    {
-                        "id":"$uuid",
-                        "level":0,
-                        "email":"argo@xray"
-                    }
-                ],
-                "decryption":"none"
-            },
-            "streamSettings":{
-                "network":"ws",
-                "security":"none",
-                "wsSettings":{
-                    "path":"/vless"
-                }
-            },
-            "sniffing":{
-                "enabled":true,
-                "destOverride":[
-                    "http",
-                    "tls",
-                    "quic"
-                ],
-                "metadataOnly":false
-            }
-        },
-        {
-            "port":3003,
-            "listen":"127.0.0.1",
-            "protocol":"vmess",
-            "settings":{
-                "clients":[
-                    {
-                        "id":"$uuid",
-                        "alterId":0
-                    }
-                ]
-            },
-            "streamSettings":{
-                "network":"ws",
-                "wsSettings":{
-                    "path":"/vmess"
-                }
-            },
-            "sniffing":{
-                "enabled":true,
-                "destOverride":[
-                    "http",
-                    "tls",
-                    "quic"
-                ],
-                "metadataOnly":false
-            }
-        },
-        {
-            "port":3004,
-            "listen":"127.0.0.1",
-            "protocol":"trojan",
-            "settings":{
-                "clients":[
-                    {
-                        "password":"$uuid"
-                    }
-                ]
-            },
-            "streamSettings":{
-                "network":"ws",
-                "security":"none",
-                "wsSettings":{
-                    "path":"/trojan"
-                }
-            },
-            "sniffing":{
-                "enabled":true,
-                "destOverride":[
-                    "http",
-                    "tls",
-                    "quic"
-                ],
-                "metadataOnly":false
-            }
-        },
-        {
-            "port":3005,
-            "listen":"127.0.0.1",
-            "protocol":"shadowsocks",
-            "settings":{
-                "clients":[
-                    {
-                        "method":"chacha20-ietf-poly1305",
-                        "password":"$uuid"
-                    }
-                ],
-                "decryption":"none"
-            },
-            "streamSettings":{
-                "network":"ws",
-                "wsSettings":{
-                    "path":"/shadowsocks"
-                }
-            },
-            "sniffing":{
-                "enabled":true,
-                "destOverride":[
-                    "http",
-                    "tls",
-                    "quic"
-                ],
-                "metadataOnly":false
+            "streamSettings": {
+                "network": "ws",
+                "security": "none"
             }
         }
     ],
-    "dns":{
-        "servers":[
-            "https+local://8.8.8.8/dns-query"
-        ]
-    },
-    "outbounds":[
+    "outbounds": [
         {
-            "protocol":"freedom"
+            "protocol": "freedom",
+            "tag": "direct"
+        },
+        {
+            "protocol": "blackhole",
+            "tag": "block"
         }
     ]
 }
 EOF
-    nohup ./web -config=config.json &>/dev/null &
-    green "Deepnote xray 已安装完成！"
+    nohup ./web run &>/dev/null &
+    green "Deepnote v2ray 已安装完成！"
     yellow "请认真阅读项目博客说明文档，配置出站链接！"
     yellow "别忘记给项目点一个免费的Star！"
     echo ""
