@@ -81,7 +81,7 @@ installProxy(){
     yellow "将在NaiveProxy使用的端口是：$proxyport"
     read -rp "请输入需要使用在NaiveProxy的域名：" domain
     read -rp "请输入NaiveProxy的用户名 [回车随机生成]：" proxyname
-    [[ -z $proxyname ]] && proxyname=$(date +%s%N | md5sum | cut -c 1-8)
+    [[ -z $proxyname ]] && proxyname=$(date +%s%N | md5sum | cut -c 1-16)
     read -rp "请输入NaiveProxy的密码 [回车随机生成]：" proxypwd
     [[ -z $proxypwd ]] && proxypwd=$(date +%s%N | md5sum | cut -c 1-16)
     read -rp "请输入NaiveProxy的伪装网站地址 （去除https://） [回车世嘉maimai日本网站]：" proxysite
@@ -167,6 +167,60 @@ stopProxy(){
 reloadProxy(){
     systemctl restart caddy
     green "NaiveProxy 已重启成功！"
+}
+
+changeport(){
+    oldport=$(cat /etc/caddy/Caddyfile | sed -n 1p | awk '{print $1}' | sed "s/://g" | sed "s/,//g")
+    read -rp "请输入需要用在NaiveProxy的端口 [回车随机分配端口]：" proxyport
+    [[ -z $proxyport ]] && proxyport=$(shuf -i 2000-65535 -n 1)
+    until [[ -z $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$proxyport") ]]; do
+        if [[ -n $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$proxyport") ]]; then
+            echo -e "${RED} $proxyport ${PLAIN} 端口已经被其他程序占用，请更换端口重试！"
+            read -rp "请输入需要用在NaiveProxy的端口 [回车随机分配端口]：" proxyport
+            [[ -z $proxyport ]] && proxyport=$(shuf -i 2000-65535 -n 1)
+        fi
+    done
+    sed -i "s#$oldport#$proxyport#g" /etc/caddy/Caddyfile
+    sed -i "s#$oldport#$proxyport#g" /root/naive/naive-client.json
+    sed -i "s#$oldport#$proxyport#g" /root/naive/naive-url.txt
+    reloadProxy
+}
+
+
+changedomain(){
+    olddomain=$(cat /etc/caddy/Caddyfile | sed -n 1p | awk '{print $2}')
+    read -rp "请输入需要使用在NaiveProxy的域名：" domain
+    sed -i "s#$olddomain#$domain#g" /etc/caddy/Caddyfile
+    sed -i "s#$olddomain#$domain#g" /root/naive/naive-client.json
+    sed -i "s#$olddomain#$domain#g" /root/naive/naive-url.txt
+}
+
+changeusername(){
+    oldproxyname=$(cat /etc/caddy/Caddyfile | grep "basic_auth" | awk '{print $2}')
+    read -rp "请输入NaiveProxy的用户名 [回车随机生成]：" proxyname
+    [[ -z $proxyname ]] && proxyname=$(date +%s%N | md5sum | cut -c 1-16)
+    sed -i "s#$oldproxyname#$proxyname#g" /etc/caddy/Caddyfile
+    sed -i "s#$oldproxyname#$proxyname#g" /root/naive/naive-client.json
+    sed -i "s#$oldproxyname#$proxyname#g" /root/naive/naive-url.txt
+    reloadProxy
+}
+
+changepassword(){
+    oldproxypwd=$(cat /etc/caddy/Caddyfile | grep "basic_auth" | awk '{print $3}')
+    read -rp "请输入NaiveProxy的密码 [回车随机生成]：" proxypwd
+    [[ -z $proxypwd ]] && proxypwd=$(date +%s%N | md5sum | cut -c 1-16)
+    sed -i "s#$oldproxypwd#$proxypwd#g" /etc/caddy/Caddyfile
+    sed -i "s#$oldproxypwd#$proxypwd#g" /root/naive/naive-client.json
+    sed -i "s#$oldproxypwd#$proxypwd#g" /root/naive/naive-url.txt
+    reloadProxy
+}
+
+changeproxysite(){
+    oldproxysite=$(cat /etc/caddy/Caddyfile | grep "reverse_proxy" | awk '{print $2}' | sed "s/https:\/\///g")
+    read -rp "请输入NaiveProxy的伪装网站地址 （去除https://） [回车世嘉maimai日本网站]：" proxysite
+    [[ -z $proxysite ]] && proxysite="maimai.sega.jp"
+    sed -i "s#$oldproxysite#$proxysite#g" /etc/caddy/Caddyfile
+    reloadProxy
 }
 
 modifyConfig(){
