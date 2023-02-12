@@ -35,8 +35,14 @@ red "2. 我不保证脚本其搭建节点的稳定性"
 read -rp "是否安装脚本？ [Y/N]：" yesno
 
 if [[ $yesno =~ Y|y ]]; then
+    yellow "正在安装Flyctl命令行工具..."
     curl -L https://fly.io/install.sh | FLYCTL_INSTALL=/usr/local sh
+    yellow "请复制以下链接，让Flyctl登录你的Fly.io账户"
     flyctl auth login
+    if [[ -n $(flyctl auth token | grep "No access token available") ]]; then
+        red "Fly.io 账户登录失败！脚本自动退出。"
+        exit 1
+    fi
 else
     red "已退出安装！"
 fi
