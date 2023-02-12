@@ -46,7 +46,7 @@ if [[ $yesno =~ "Y"|"y" ]]; then
         uuid="8d4a8f5e-c2f7-4c1b-b8c0-f8f5a9b6c384"
     fi
     rm -f config.json
-    cat <<EOF > config.json
+    cat << EOF > config.json
 {
     "log": {
         "loglevel": "warning"
