@@ -40,9 +40,15 @@ if [[ $yesno =~ Y|y ]]; then
     yellow "请复制以下链接，让Flyctl登录你的Fly.io账户"
     flyctl auth login
     if [[ -n $(flyctl auth token | grep "No access token available") ]]; then
-        red "Fly.io 账户登录失败！脚本自动退出。"
+        red "Fly.io 账户登录失败！脚本已自动退出。"
         exit 1
     fi
+
+    read -p "请输入你的Fly.io节点项目的git地址 [默认博客项目]：" gitaddress
+    [[ -z $gitaddress ]] && gitaddress="https://github.com/Misaka-blog/xray-for-flyio.git"
+    git clone $gitaddress deploy-xray
+    cd deploy-xray
+    
 else
     red "已退出安装！"
 fi
