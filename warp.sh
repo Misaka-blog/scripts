@@ -776,6 +776,13 @@ unstwpgo(){
     green "WARP-Go 已彻底卸载成功!"
 }
 
+instcli(){
+    if [[ ! $SYSTEM == "CentOS" ]]; then
+        ${PACKAGE_UPDATE[int]}
+    fi
+    ${PACKAGE_INSTALL[int]} curl wget sudo qrencode
+}
+
 warpswitch(){
     echo ""
     yellow "请选择你需要的操作："
