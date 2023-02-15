@@ -45,7 +45,7 @@ if [[ $yesno =~ Y|y ]]; then
     fi
 
     read -p "请输入你的Fly.io节点项目的git地址 [默认博客项目]：" gitaddress
-    [[ -z $gitaddress ]] && gitaddress="https://github.com/Misaka-blog/xray-for-flyio.git"
+    [[ -z $gitaddress ]] && gitaddress="https://gitlab.com/Misaka-blog/xray-for-flyio.git"
     git clone $gitaddress deploy-xray
     cd deploy-xray
     
