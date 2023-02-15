@@ -49,6 +49,14 @@ if [[ $yesno =~ Y|y ]]; then
     git clone $gitaddress deploy-xray
     cd deploy-xray
     
+    yellow "请在Deploy now这里输入n，然后让脚本继续配置"
+    flyctl launch
+    sed -i "s/8080/80/g" fly.toml
+
+    read -p "请输入部署地区 【默认hkg】：" region
+    [[ -z $region ]] && region="hkg"
+    flyctl regions set $region
+    flyctl deploy
 else
     red "已退出安装！"
 fi
