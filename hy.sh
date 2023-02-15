@@ -49,26 +49,9 @@ check_tun(){
     TUN=$(cat /dev/net/tun 2>&1 | tr '[:upper:]' '[:lower:]')
     if [[ ! $TUN =~ 'in bad state' ]] && [[ ! $TUN =~ '处于错误状态' ]] && [[ ! $TUN =~ 'Die Dateizugriffsnummer ist in schlechter Verfassung' ]]; then
         if [[ $vpsvirt == "openvz" ]]; then
-            wget -N --no-check-certificate https://raw.githubusercontents.com/misaka-gh/tun-script/master/tun.sh && bash tun.sh
+            wget -N --no-check-certificate https://gitlab.com/Misaka-blog/warp-script/-/raw/main/files/tun.sh && bash tun.sh
         else
             red "检测到未开启TUN模块，请到VPS控制面板处开启" 
-            exit 1
-        fi
-    fi
-}
-
-checkCentOS8(){
-    if [[ -n $(cat /etc/os-release | grep "CentOS Linux 8") ]]; then
-        yellow "检测到当前VPS系统为CentOS 8，是否升级为CentOS Stream 8以确保软件包正常安装？"
-        read -rp "请输入选项 [y/n]：" comfirmCentOSStream
-        if [[ $comfirmCentOSStream == "y" ]]; then
-            yellow "正在为你升级到CentOS Stream 8，大概需要10-30分钟的时间"
-            sleep 1
-            sed -i -e "s|releasever|releasever-stream|g" /etc/yum.repos.d/CentOS-*
-            yum clean all && yum makecache
-            dnf swap centos-linux-repos centos-stream-repos distro-sync -y
-        else
-            red "已取消升级过程，脚本即将退出！"
             exit 1
         fi
     fi
@@ -96,9 +79,8 @@ install_base() {
 
 downloadHysteria() {
     rm -f /usr/bin/hysteria
-    rm -rf /root/Hysteria
-    mkdir /root/Hysteria
-    ## last_version=$(curl -Ls "https://api.github.com/repos/HyNetwork/Hysteria/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+    rm -rf /root/hy
+    mkdir /root/hy
     last_version=$(curl -Ls "https://data.jsdelivr.com/v1/package/resolve/gh/HyNetwork/Hysteria" | grep '"version":' | sed -E 's/.*"([^"]+)".*/\1/')
     if [[ ! -n "$last_version" ]]; then
         red "检测 Hysteria 版本失败，可能是网络错误，请稍后再试"
@@ -224,7 +206,6 @@ installBBR() {
 }
 
 installHysteria() {
-    checkCentOS8
     install_base
     downloadHysteria
     read -rp "是否安装BBR（y/n，默认n）：" INSTALL_BBR_YN
