@@ -110,17 +110,17 @@ makeConfig() {
     [[ -z $OBFS ]] && OBFS=$(date +%s%N | md5sum | cut -c 1-32)
     sysctl -w net.core.rmem_max=4000000
     ulimit -n 1048576 && ulimit -u unlimited
-    openssl ecparam -genkey -name prime256v1 -out /root/Hysteria/private.key
-    openssl req -new -x509 -days 36500 -key /root/Hysteria/private.key -out /root/Hysteria/cert.crt -subj "/CN=www.bilibili.com"
-    cat <<EOF > /root/Hysteria/server.json
+    openssl ecparam -genkey -name prime256v1 -out /root/hy/private.key
+    openssl req -new -x509 -days 36500 -key /root/hy/private.key -out /root/hy/cert.crt -subj "/CN=www.bilibili.com"
+    cat <<EOF > /root/hy/server.json
 {
     "listen": ":$PORT",
-    "cert": "/root/Hysteria/cert.crt",
-    "key": "/root/Hysteria/private.key",
+    "cert": "/root/hy/cert.crt",
+    "key": "/root/hy/private.key",
     "obfs": "$OBFS"
 }
 EOF
-    cat <<EOF > /root/Hysteria/client.json
+    cat <<EOF > /root/hy/client.json
 {
     "server": "$IP:$PORT",
     "obfs": "$OBFS",
@@ -135,7 +135,7 @@ EOF
     }
 }
 EOF
-    cat <<EOF > /root/Hysteria/v2rayn.json
+    cat <<EOF > /root/hy/v2rayn.json
 {
     "server": "$IP:$PORT",
     "obfs": "$OBFS",
@@ -162,8 +162,8 @@ After=network.target
 WantedBy=multi-user.target
 [Service]
 Type=simple
-WorkingDirectory=/root/Hysteria
-ExecStart=/usr/bin/hysteria -c /root/Hysteria/server.json server
+WorkingDirectory=/root/hy
+ExecStart=/usr/bin/hysteria -c /root/hy/server.json server
 Restart=always
 TEXT
     url="hysteria://$IP:$PORT?auth=$OBFS&upmbps=200&downmbps=1000&obfs=xplus&obfsParam=$OBFS"
@@ -221,9 +221,9 @@ installHysteria() {
     elif [[ -n $(service hysteria status 2>/dev/null | grep "active") ]]; then
         show_usage
         green "Hysteria 服务器安装成功"
-        yellow "服务器配置文件已保存到 /root/Hysteria/server.json"
-        yellow "客户端配置文件已保存到 /root/Hysteria/client.json"
-        yellow "V2rayN 代理规则分流配置文件已保存到 /root/Hysteria/v2rayn.json"
+        yellow "服务器配置文件已保存到 /root/hy/server.json"
+        yellow "客户端配置文件已保存到 /root/hy/client.json"
+        yellow "V2rayN 代理规则分流配置文件已保存到 /root/hy/v2rayn.json"
         yellow "SagerNet / ShadowRocket 分享链接: "
         green "$url"
     fi
@@ -251,7 +251,7 @@ view_log(){
 uninstall(){
     systemctl stop hysteria
     systemctl disable hysteria
-    rm -rf /root/Hysteria
+    rm -rf /root/hy
     rm -f /usr/bin/hysteria /usr/local/bin/hy
     rm -f /etc/systemd/system/hysteria.service
     green "Hysteria 卸载完成！"
