@@ -688,7 +688,7 @@ installwpgo(){
     fi
 
     mkdir -p /opt/warp-go/
-    wget -O /opt/warp-go/warp-go https://gitlab.com/Misaka-blog/warp-script/-/raw/main/files/warp-go/warp-go-latest-linux-$(archAffix)
+    wget -O /opt/warp-go/warp-go https://cdn.jsdelivr.net/gh/Misaka-blog/warp/files/warp-go/warp-go-latest-linux-$(archAffix)
     chmod +x /opt/warp-go/warp-go
 
     wpgoreg
