@@ -137,7 +137,11 @@ checkmtu(){
         fi
     done
     MTU=$((${MTUy} - 80))
-    sed -i "s/MTU.*/MTU = $MTU/g" wgcf-profile.conf
+    if [[ -n $(type -P wg-quick) && -n $(type -P wgcf) ]]; then
+        sed -i "s/MTU.*/MTU = $MTU/g" wgcf-profile.conf
+    else
+        sed -i "s/MTU.*/MTU = $MTU/g" /opt/warp-go/warp.conf
+    fi
     green "MTU 最佳值=$MTU 已设置完毕"
 }
 
@@ -688,7 +692,7 @@ installwpgo(){
     fi
 
     mkdir -p /opt/warp-go/
-    wget -O /opt/warp-go/warp-go https://cdn.jsdelivr.net/gh/Misaka-blog/warp/files/warp-go/warp-go-latest-linux-$(archAffix)
+    wget -O /opt/warp-go/warp-go https://gitlab.com/Misaka-blog/warp-script/-/raw/main/files/warp-go/warp-go-latest-linux-$(archAffix)
     chmod +x /opt/warp-go/warp-go
 
     wpgoreg
