@@ -93,7 +93,7 @@ archAffix(){
 }
 
 if [[ ! -f /usr/local/bin/nf ]]; then
-    wget https://cdn.jsdelivr.net/gh/Misaka-blog/cfwarp-script/files/netflix-verify/nf-linux-$(archAffix) -O /usr/local/bin/nf
+    wget https://gitlab.com/Misaka-blog/warp-script/-/raw/main/files/netflix-verify/nf-linux-$(archAffix) -O /usr/local/bin/nf
     chmod +x /usr/local/bin/nf
 fi
 
@@ -180,7 +180,7 @@ checktun(){
                 return 0
             fi
         elif [[ $VIRT == "openvz" ]]; then
-            wget -N --no-check-certificate https://cdn.jsdelivr.net/gh/Misaka-blog/cfwarp-script/files/tun.sh && bash tun.sh
+            wget -N --no-check-certificate https://gitlab.com/Misaka-blog/warp-script/-/raw/main/files/tun.sh && bash tun.sh
         else
             red "检测到目前VPS未开启TUN模块, 请到后台控制面板处开启"
             exit 1
@@ -373,7 +373,7 @@ installwgcf(){
         ${PACKAGE_INSTALL[int]} epel-release
         ${PACKAGE_INSTALL[int]} sudo curl wget iproute net-tools wireguard-tools iptables bc htop screen python3 iputils qrencode
         if [[ $OSID == 9 ]] && [[ -z $(type -P resolvconf) ]]; then
-            wget -N https://cdn.jsdelivr.net/gh/Misaka-blog/cfwarp-script/files/resolvconf -O /usr/sbin/resolvconf
+            wget -N https://gitlab.com/Misaka-blog/warp-script/-/raw/main/files/resolvconf -O /usr/sbin/resolvconf
             chmod +x /usr/sbin/resolvconf
         fi
     fi
@@ -394,7 +394,7 @@ installwgcf(){
     fi
     
     if [[ $main -lt 5 ]] || [[ $minor -lt 6 ]] || [[ $VIRT =~ lxc|openvz ]]; then
-        wget -N --no-check-certificate https://cdn.jsdelivr.net/gh/Misaka-blog/cfwarp-script/files/wireguard-go/wireguard-go-$(archAffix) -O /usr/bin/wireguard-go
+        wget -N --no-check-certificate https://gitlab.com/Misaka-blog/warp-script/-/raw/main/files/wireguard-go/wireguard-go-$(archAffix) -O /usr/bin/wireguard-go
         chmod +x /usr/bin/wireguard-go
     fi
 
@@ -420,7 +420,7 @@ installwgcf(){
 }
 
 initwgcf(){
-    wget -N --no-check-certificate https://cdn.jsdelivr.net/gh/Misaka-blog/cfwarp-script/files/wgcf/wgcf-latest-linux-$(archAffix) -O /usr/local/bin/wgcf
+    wget -N --no-check-certificate https://gitlab.com/Misaka-blog/warp-script/-/raw/main/files/wgcf/wgcf-latest-linux-$(archAffix) -O /usr/local/bin/wgcf
     chmod +x /usr/local/bin/wgcf
 }
 
@@ -688,7 +688,7 @@ installwpgo(){
     fi
 
     mkdir -p /opt/warp-go/
-    wget -O /opt/warp-go/warp-go https://cdn.jsdelivr.net/gh/Misaka-blog/cfwarp-script/files/warp-go/warp-go-latest-linux-$(archAffix)
+    wget -O /opt/warp-go/warp-go https://gitlab.com/Misaka-blog/warp-script/-/raw/main/files/warp-go/warp-go-latest-linux-$(archAffix)
     chmod +x /opt/warp-go/warp-go
 
     wpgoreg
@@ -738,7 +738,7 @@ wpgocheck(){
         systemctl start warp-go
         systemctl enable warp-go >/dev/null 2>&1
         checkwarp
-        sleep 3
+        sleep 5
         if [[ $wpv4 =~ on|plus ]] || [[ $wpv6 =~ on|plus ]]; then
             green "WARP-GO 已启动成功！"
             break
@@ -774,13 +774,6 @@ unstwpgo(){
     /opt/warp-go/warp-go --config=/opt/warp-go/warp.conf --remove >/dev/null 2>&1
     rm -rf /opt/warp-go /usr/bin/warp-go /lib/systemd/system/warp-go.service
     green "WARP-Go 已彻底卸载成功!"
-}
-
-instcli(){
-    if [[ ! $SYSTEM == "CentOS" ]]; then
-        ${PACKAGE_UPDATE[int]}
-    fi
-    ${PACKAGE_INSTALL[int]} curl wget sudo qrencode
 }
 
 warpswitch(){
@@ -993,7 +986,7 @@ wgcfaccount(){
         read -rp "请复制粘贴WARP Teams账户配置文件链接 [如未输入则使用脚本默认的]：" teamconfigurl
         if [[ -z $teamconfigurl ]]; then
             yellow "未输入Teams账户配置文件链接，正在使用脚本公用Teams账户..."
-            teamconfigurl="https://raw.githubusercontent.com/Misaka-blog/cfwarp-script/main/files/teams.xml"
+            teamconfigurl="https://gitlab.com/Misaka-blog/warp-script/-/raw/main/files/teams.xml"
         fi
         teamsconfig=$(curl -sSL "$teamconfigurl" | sed "s/\"/\&quot;/g")
         wpteampublickey=$(expr "$teamsconfig" : '.*public_key&quot;:&quot;\([^&]*\).*')
@@ -1291,31 +1284,25 @@ menu(){
     echo -e " ${GREEN}3.${PLAIN} 安装 / 切换 WARP-GO"
     echo -e " ${GREEN}4.${PLAIN} ${RED}卸载 WARP-GO${PLAIN}"
     echo " -------------"
-    echo -e " ${GREEN}5.${PLAIN} 安装 / 切换 WARP-Cli"
-    echo -e " ${GREEN}6.${PLAIN} ${RED}卸载 WARP-Cli${PLAIN}"
-    echo " -------------"
-    echo -e " ${GREEN}7.${PLAIN} 安装 / 切换 WireProxy-WARP"
-    echo -e " ${GREEN}8.${PLAIN} ${RED}卸载 WireProxy-WARP${PLAIN}"
-    echo " -------------"
-    echo -e " ${GREEN}9.${PLAIN} 开启、关闭或重启 WARP"
-    echo -e " ${GREEN}10.${PLAIN} 提取 WireGuard 配置文件"
-    echo -e " ${GREEN}11.${PLAIN} WARP+ 账户刷流量"
-    echo -e " ${GREEN}12.${PLAIN} 切换 WARP 账户类型"
+    echo -e " ${GREEN}5.${PLAIN} 开启、关闭或重启 WARP"
+    echo -e " ${GREEN}6.${PLAIN} 提取 WireGuard 配置文件"
+    echo -e " ${GREEN}7.${PLAIN} WARP+ 账户刷流量"
+    echo -e " ${GREEN}8.${PLAIN} 切换 WARP 账户类型"
     echo " -------------"
     echo -e " ${GREEN}0.${PLAIN} 退出脚本"
     echo ""
     ipinfo
     echo ""
-    read -rp "请输入选项 [0-12]: " menuInput
+    read -rp "请输入选项 [0-8]: " menuInput
     case $menuInput in
         1 ) infowgcf ;;
         2 ) unstwgcf ;;
         3 ) infowpgo ;;
         4 ) unstwpgo ;;
-        9 ) warpswitch ;;
-        10 ) wgprofile ;;
-        11 ) warptraffic ;;
-        12 ) warpaccount ;;
+        5 ) warpswitch ;;
+        6 ) wgprofile ;;
+        7 ) warptraffic ;;
+        8 ) warpaccount ;;
         * ) exit 1 ;;
     esac
 }
