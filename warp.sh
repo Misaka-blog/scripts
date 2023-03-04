@@ -709,6 +709,7 @@ Restart=always
 WantedBy=multi-user.target
 EOF
 
+    checkmtu
     wpgoconf
     wpgocheck
     checkv4v6
