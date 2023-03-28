@@ -568,15 +568,10 @@ check_wgcf() {
         if [[ $warp_v4 =~ on|plus ]] || [[ $warp_v6 =~ on|plus ]]; then
             green "WGCF-WARP 已启动成功！"
             echo ""
-            red "下面是广告时间："
+            red "下面是恰饭广告："
             yellow "灵梦机场"
-            yellow "专线节点加速"
-            yellow "支持流媒体解锁"
-            yellow "支持ChatGPT"
-            yellow "晚高峰4k秒开"
-            yellow "大多为x0.5倍节点"
-            yellow "这一切，仅9.9元"
-            yellow "优惠尽在：https://cloud.reimu.work"
+            green "专线节点加速、支持流媒体解锁、支持ChatGPT、晚高峰4k秒开、大多为x0.5倍节点，这一切，仅9.9元"
+            yellow "优惠尽在：https://reimu.work/auth/register?code=aKKj"
             yellow "TG群：https://t.me/ReimuCloudGrup"
             echo ""
             before_showinfo && show_info
