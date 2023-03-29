@@ -30,10 +30,16 @@ SITES=(
 CONFIG_FILE="/usr/local/etc/xray/config.json"
 OS=`hostnamectl | grep -i system | cut -d: -f2`
 
+systemctl stop warp-go >/dev/null 2>&1
+wg-quick down wgcf >/dev/null 2>&1
+
 IP=$(curl -s4m8 ip.p3terx.com | sed -n 1p)
 if [[ "$?" != "0" ]]; then
     IP=$(curl -s6m8 ip.p3terx.com | sed -n 1p)
 fi
+
+systemctl start warp-go >/dev/null 2>&1
+wg-quick up wgcf >/dev/null 2>&1
 
 BT="false"
 NGINX_CONF_PATH="/etc/nginx/conf.d/"
