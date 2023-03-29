@@ -1800,6 +1800,7 @@ menu() {
     echo -e "# ${GREEN}Telegram 群组${PLAIN}: https://t.me/misakanoxpz                   #"
     echo -e "# ${GREEN}YouTube 频道${PLAIN}: https://www.youtube.com/@misaka-blog        #"
     echo "#############################################################"
+    echo ""
     echo -e " ${GREEN}1.${PLAIN} 安装Xray-VMESS"
     echo -e " ${GREEN}2.${PLAIN} 安装Xray-${BLUE}VMESS+mKCP${PLAIN}"
     echo -e " ${GREEN}3.${PLAIN} 安装Xray-VMESS+TCP+TLS"

@@ -51,6 +51,10 @@ menu(){
     echo -e "# ${GREEN}Telegram 群组${PLAIN}: https://t.me/misakanoc                     #"
     echo -e "# ${GREEN}YouTube 频道${PLAIN}: https://www.youtube.com/@misaka-blog        #"
     echo "#############################################################"
+    echo ""
+    echo -e " ${GREEN}1.${PLAIN} 安装Sing-box-vmess"
+    echo -e " ${GREEN}1.${PLAIN} 安装Sing-box-vless"
+    echo -e " ${GREEN}1.${PLAIN} 安装Sing-box-trojan"
 }
 
 menu
