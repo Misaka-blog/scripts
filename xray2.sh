@@ -1914,6 +1914,7 @@ checkSystem
 
 action=$1
 [[ -z $1 ]] && action=menu
+
 case "$action" in
     menu|update|uninstall|start|restart|stop|showInfo|showLog)
         ${action}
