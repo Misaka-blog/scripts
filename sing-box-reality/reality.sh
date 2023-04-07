@@ -53,7 +53,7 @@ install_base(){
     if [[ ! $SYSTEM == "CentOS" ]]; then
         ${PACKAGE_UPDATE[int]}
     fi
-    ${PACKAGE_INSTALL[int]} curl wget sudo tar
+    ${PACKAGE_INSTALL[int]} curl wget sudo tar openssl
 }
 
 install_singbox(){
@@ -74,6 +74,118 @@ install_singbox(){
         dpkg -i sing-box.deb
         rm -f sing-box.deb
     fi
+
+    if [[ -f "/etc/systemd/system/sing-box.service" ]]; then
+        green "Sing-box 安装成功！"
+    else
+        red "Sing-box 安装失败！"
+        exit 1
+    fi
+
+    read -rp "请输入 UUID [可留空待脚本生成]: " UUID
+    [[ -z $UUID ]] && UUID=$(sing-box generate uuid)
+    short_id=$(openssl rand -hex 8)
+
+    # Reality 公私钥
+    keys=$(sing-box generate reality-keypair)
+    private_key=$(echo $keys | awk -F " " '{print $2}')
+    public_key=$(echo $keys | awk -F " " '{print $4}')
+
+    rm -f /etc/sing-box/config.json
+    cat << EOF > /etc/sing-box/config.json
+{
+    "log": {
+        "level": "trace",
+        "timestamp": true
+    },
+    "inbounds": [
+        {
+            "type": "vless",
+            "tag": "vless-in",
+            "listen": "::",
+            "listen_port": 443,
+            "sniff": true,
+            "sniff_override_destination": true,
+            "users": [
+                {
+                    "uuid": "$UUID",
+                    "flow": "xtls-rprx-vision"
+                }
+            ],
+            "tls": {
+                "enabled": true,
+                "server_name": "www.microsoft.com",
+                "reality": {
+                    "enabled": true,
+                    "handshake": {
+                        "server": "www.microsoft.com",
+                        "server_port": 443
+                    },
+                    "private_key": "$private_key",
+                    "short_id": [
+                        "$short_id"
+                    ]
+                }
+            }
+        }
+    ],
+    "outbounds": [
+        {
+            "type": "direct",
+            "tag": "direct"
+        },
+        {
+            "type": "block",
+            "tag": "block"
+        }
+    ],
+    "route": {
+        "rules": [
+            {
+                "geoip": "cn",
+                "outbound": "block"
+            },
+            {
+                "geosite": "category-ads-all",
+                "outbound": "block"
+            }
+        ],
+        "final": "direct"
+    }
+}
+EOF
+
+    warp_v4=$(curl -s4m8 https://www.cloudflare.com/cdn-cgi/trace -k | grep warp | cut -d= -f2)
+    warp_v6=$(curl -s6m8 https://www.cloudflare.com/cdn-cgi/trace -k | grep warp | cut -d= -f2)
+    if [[ $warp_v4 =~ on|plus ]] || [[ $warp_v6 =~ on|plus ]]; then
+        systemctl stop warp-go >/dev/null 2>&1
+        systemctl disable warp-go >/dev/null 2>&1
+        wg-quick down wgcf >/dev/null 2>&1
+        systemctl disable wg-quick@wgcf >/dev/null 2>&1
+        IP=$(expr "$(curl -ks4m8 -A Mozilla https://api.ip.sb/geoip)" : '.*ip\":[ ]*\"\([^"]*\).*') || IP=$(expr "$(curl -ks6m8 -A Mozilla https://api.ip.sb/geoip)" : '.*ip\":[ ]*\"\([^"]*\).*')
+        systemctl start warp-go >/dev/null 2>&1
+        systemctl enable warp-go >/dev/null 2>&1
+        wg-quick start wgcf >/dev/null 2>&1
+        systemctl enable wg-quick@wgcf >/dev/null 2>&1
+    else
+        IP=$(expr "$(curl -ks4m8 -A Mozilla https://api.ip.sb/geoip)" : '.*ip\":[ ]*\"\([^"]*\).*') || IP=$(expr "$(curl -ks6m8 -A Mozilla https://api.ip.sb/geoip)" : '.*ip\":[ ]*\"\([^"]*\).*')
+    fi
+
+    mkdir /root/sing-box >/dev/null 2>&1
+    share_link="vless://$UUID@$IP:443?encryption=none&flow=xtls-rprx-vision&security=reality&fp=chrome&pbk=$public_key&sid=$short_id&type=tcp&headerType=none&host=www.microsoft.com#Misaka-Reality"
+    echo ${share_link} > /root/sing-box/share-link.txt
+
+    systemctl start sing-box >/dev/null 2>&1
+    systemctl enable sing-box >/dev/null 2>&1
+
+    if [[ -n $(systemctl status sing-box 2>/dev/null | grep -w active) && -f '/etc/sing-box/config.json' ]]; then
+        green "Sing-box 服务启动成功"
+    else
+        red "Sing-box 服务启动失败，请运行 systemctl status sing-box 查看服务状态并反馈，脚本退出" && exit 1
+    fi
+
+    yellow "下面是 Sing-box Reality 的分享链接，并已保存至 /root/sing-box/share-link.txt"
+    red $share_link
 }
 
 menu(){
