@@ -102,6 +102,7 @@ menu(){
     echo ""
     read -rp " 请输入选项 [0-6] ：" answer
     case $answer in
+        1) install_singbox ;;
         *) red "请输入正确的选项 [0-6]！" && exit 1 ;;
     esac
 }
