@@ -1,7 +1,5 @@
 #!/bin/bash
 
-export LANG=en_US.UTF-8
-
 RED="\033[31m"
 GREEN="\033[32m"
 YELLOW="\033[33m"
@@ -27,9 +25,9 @@ PACKAGE_INSTALL=("apt -y install" "apt -y install" "yum -y install" "yum -y inst
 PACKAGE_REMOVE=("apt -y remove" "apt -y remove" "yum -y remove" "yum -y remove")
 PACKAGE_UNINSTALL=("apt -y autoremove" "apt -y autoremove" "yum -y autoremove" "yum -y autoremove")
 
-[[ $EUID -ne 0 ]] && red "注意：请在root用户下运行脚本" && exit 1
+[[ $EUID -ne 0 ]] && red "请在root用户下运行脚本" && exit 1
 
-CMD=("$(grep -i pretty_name /etc/os-release 2>/dev/null | cut -d \" -f2)" "$(hostnamectl 2>/dev/null | grep -i system | cut -d : -f2)" "$(lsb_release -sd 2>/dev/null)" "$(grep -i description /etc/lsb-release 2>/dev/null | cut -d \" -f2)" "$(grep . /etc/redhat-release 2>/dev/null)" "$(grep . /etc/issue 2>/dev/null | cut -d \\ -f1 | sed '/^[ ]*$/d')") 
+CMD=("$(grep -i pretty_name /etc/os-release 2>/dev/null | cut -d \" -f2)" "$(hostnamectl 2>/dev/null | grep -i system | cut -d : -f2)" "$(lsb_release -sd 2>/dev/null)" "$(grep -i description /etc/lsb-release 2>/dev/null | cut -d \" -f2)" "$(grep . /etc/redhat-release 2>/dev/null)" "$(grep . /etc/issue 2>/dev/null | cut -d \\ -f1 | sed '/^[ ]*$/d')")
 
 for i in "${CMD[@]}"; do
     SYS="$i" && [[ -n $SYS ]] && break
@@ -39,152 +37,316 @@ for ((int = 0; int < ${#REGEX[@]}; int++)); do
     [[ $(echo "$SYS" | tr '[:upper:]' '[:lower:]') =~ ${REGEX[int]} ]] && SYSTEM="${RELEASE[int]}" && [[ -n $SYSTEM ]] && break
 done
 
-[[ $EUID -ne 0 ]] && red "注意：请在root用户下运行脚本" && exit 1
+[[ $EUID -ne 0 ]] && red "请在root用户下运行脚本" && exit 1
 
-virt=$(systemd-detect-virt)
+IP=$(curl -s6m8 ip.sb) || IP=$(curl -s4m8 ip.sb)
 
-inst_cert(){
-    green "Hysteria 协议证书申请方式如下："
-    echo ""
-    echo -e " ${GREEN}1.${PLAIN} 必应自签证书 ${YELLOW}（默认）${PLAIN}"
-    echo -e " ${GREEN}2.${PLAIN} Acme 脚本自动申请"
-    echo -e " ${GREEN}3.${PLAIN} 自定义证书路径"
-    echo ""
-    read -rp "请输入选项 [1-3]: " certInput
-    if [[ $certInput == 2 ]]; then
-        certpath="/root/cert.crt"
-        keypath="/root/private.key"
-        if [[ -f /root/cert.crt && -f /root/private.key ]] && [[ -s /root/cert.crt && -s /root/private.key ]] && [[ -f /root/ca.log ]]; then
-            domain=$(cat /root/ca.log)
-            green "检测到原有域名：$domain 的证书，正在应用"
-        else
-            read -p "请输入需要申请证书的域名：" domain
-            [[ -z $domain ]] && red "未输入域名，无法执行操作！" && exit 1
-            green "已输入的域名：$domain" && sleep 1
-            domainIP=$(curl -sm8 ipget.net/?ip="${domain}")
-            if [[ $domainIP == $ip ]]; then
-                if [[ -n $(echo $ip | grep ":") ]]; then
-                    bash ~/.acme.sh/acme.sh --issue -d ${domain} --standalone -k ec-256 --listen-v6 --insecure
-                else
-                    bash ~/.acme.sh/acme.sh --issue -d ${domain} --standalone -k ec-256 --insecure
-                fi
-                bash ~/.acme.sh/acme.sh --install-cert -d ${domain} --key-file /root/private.key --fullchain-file /root/cert.crt --ecc
-                if [[ -f /root/cert.crt && -f /root/private.key ]] && [[ -s /root/cert.crt && -s /root/private.key ]]; then
-                    echo $domain > /root/ca.log
-                    sed -i '/--cron/d' /etc/crontab >/dev/null 2>&1
-                    echo "0 0 * * * root bash /root/.acme.sh/acme.sh --cron -f >/dev/null 2>&1" >> /etc/crontab
-                    green "证书申请成功! 脚本申请到的证书 (cert.crt) 和私钥 (private.key) 文件已保存到 /root 文件夹下"
-                    yellow "证书crt文件路径如下: /root/cert.crt"
-                    yellow "私钥key文件路径如下: /root/private.key"
-                fi
-            else
-                red "当前域名解析的IP与当前VPS使用的真实IP不匹配"
-                green "建议如下："
-                yellow "1. 请确保CloudFlare小云朵为关闭状态(仅限DNS), 其他域名解析或CDN网站设置同理"
-                yellow "2. 请检查DNS解析设置的IP是否为VPS的真实IP"
-                yellow "3. 脚本可能跟不上时代, 建议截图发布到GitHub Issues、GitLab Issues、论坛或TG群询问"
+if [[ -n $(echo $IP | grep ":") ]]; then
+    IP="[$IP]"
+fi
+
+archAffix(){
+    case "$(uname -m)" in
+        i686 | i386) echo '386' ;;
+        x86_64 | amd64) echo 'amd64' ;;
+        armv5tel) echo 'arm-5' ;;
+        armv7 | armv7l) echo 'arm-7' ;;
+        armv8 | arm64 | aarch64) echo 'arm64' ;;
+        s390x) echo 's390x' ;;
+        *) red " 不支持的CPU架构！" && exit 1 ;;
+    esac
+    return 0
+}
+
+install_base() {
+    if [[ $SYSTEM != "CentOS" ]]; then
+        ${PACKAGE_UPDATE[int]}
+    fi
+    ${PACKAGE_INSTALL[int]} wget curl sudo
+}
+
+downloadHysteria() {
+    rm -f /usr/bin/hysteria
+    rm -rf /root/hy
+    mkdir /root/hy
+    ## last_version=$(curl -Ls "https://api.github.com/repos/HyNetwork/Hysteria/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+    last_version=$(curl -Ls "https://data.jsdelivr.com/v1/package/resolve/gh/HyNetwork/Hysteria" | grep '"version":' | sed -E 's/.*"([^"]+)".*/\1/')
+    if [[ ! -n "$last_version" ]]; then
+        red "检测 Hysteria 版本失败，可能是网络错误，请稍后再试"
+        exit 1
+    fi
+    yellow "检测到 Hysteria 最新版本：${last_version}，开始安装"
+    wget -N --no-check-certificate https://github.com/HyNetwork/Hysteria/releases/download/v${last_version}/Hysteria-linux-$(archAffix) -O /usr/bin/hysteria
+    if [[ $? -ne 0 ]]; then
+        red "下载 Hysteria 失败，请确保你的服务器能够连接并下载 Github 的文件"
+        exit 1
+    fi
+    chmod +x /usr/bin/hysteria
+}
+
+makeConfig() {
+    read -rp "请输入 Hysteria 的连接端口（默认：40000）：" PORT
+    [[ -z $PORT ]] && PORT=40000
+    if [[ -n $(netstat -ntlp | grep "$PORT") ]]; then
+        until [[ -z $(netstat -ntlp | grep "$PORT") ]]; do
+            if [[ -n $(netstat -ntlp | grep "$PORT") ]]; then
+                yellow "你设置的端口目前已被占用，请重新输入端口"
+                read -rp "请输入 Hysteria 的连接端口（默认：40000）：" PORT
             fi
-        fi
-    elif [[ $certInput == 3 ]]; then
-        read -p "请输入公钥文件crt的路径：" certpath
-        yellow "公钥文件crt的路径：$certpath "
-        read -p "请输入密钥文件key的路径：" keypath
-        yellow "密钥文件key的路径：$keypath "
-        read -p "请输入证书的域名：" domain
-        yellow "证书域名：$domain"
+        done
+    fi
+    read -rp "请输入 Hysteria 的连接混淆密码（默认随机生成）：" OBFS
+    [[ -z $OBFS ]] && OBFS=$(date +%s%N | md5sum | cut -c 1-32)
+    sysctl -w net.core.rmem_max=4000000
+    ulimit -n 1048576 && ulimit -u unlimited
+    openssl ecparam -genkey -name prime256v1 -out /root/hy/private.key
+    openssl req -new -x509 -days 36500 -key /root/hy/private.key -out /root/hy/cert.crt -subj "/CN=www.bilibili.com"
+    cat <<EOF > /root/hy/server.json
+{
+    "listen": ":$PORT",
+    "cert": "/root/hy/cert.crt",
+    "key": "/root/hy/private.key",
+    "obfs": "$OBFS"
+}
+EOF
+    cat <<EOF > /root/hy/client.json
+{
+    "server": "$IP:$PORT",
+    "obfs": "$OBFS",
+    "up_mbps": 200,
+    "down_mbps": 1000,
+    "insecure": true,
+    "socks5": {
+        "listen": "127.0.0.1:1080"
+    },
+    "http": {
+        "listen": "127.0.0.1:1081"
+    }
+}
+EOF
+    cat <<EOF > /root/hy/v2rayn.json
+{
+    "server": "$IP:$PORT",
+    "obfs": "$OBFS",
+    "up_mbps": 200,
+    "down_mbps": 1000,
+    "insecure": true,
+    "acl": "acl/routes.acl",
+    "mmdb": "acl/Country.mmdb",
+    "retry": 3,
+    "retry_interval": 5,
+    "socks5": {
+        "listen": "127.0.0.1:10808"
+    },
+    "http": {
+        "listen": "127.0.0.1:10809"
+    }
+}
+EOF
+    cat <<'TEXT' > /etc/systemd/system/hysteria.service
+[Unit]
+Description=Hysiteria Server
+After=network.target
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/hy
+ExecStart=/usr/bin/hysteria -c /root/hy/server.json server
+Restart=always
+TEXT
+    url="hysteria://$IP:$PORT?auth=$OBFS&upmbps=200&downmbps=1000&obfs=xplus&obfsParam=$OBFS"
+}
+
+installBBR() {
+    result=$(lsmod | grep bbr)
+    if [[ $result != "" ]]; then
+        green "BBR模块已安装"
+        return
+    fi
+    res=`systemd-detect-virt`
+    if [[ $res =~ openvz|lxc ]]; then
+        red "由于你的VPS为OpenVZ或LXC架构的VPS，跳过安装"
+        return
+    fi
+    
+    echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf
+    echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf
+    sysctl -p
+    result=$(lsmod | grep bbr)
+    if [[ "$result" != "" ]]; then
+        green "BBR模块已启用"
+        return
+    fi
+    
+    green "正在安装BBR模块..."
+    if [[ $SYSTEM = "CentOS" ]]; then
+        rpm --import https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
+        rpm -Uvh http://www.elrepo.org/elrepo-release-7.0-4.el7.elrepo.noarch.rpm
+        ${PACKAGE_INSTALL[int]} --enablerepo=elrepo-kernel kernel-ml
+        ${PACKAGE_REMOVE[int]} kernel-3.*
+        grub2-set-default 0
+        echo "tcp_bbr" >> /etc/modules-load.d/modules.conf
     else
-        openssl ecparam -genkey -name prime256v1 -out /etc/hysteria/private.key
-        openssl req -new -x509 -days 36500 -key /etc/hysteria/private.key -out /etc/hysteria/cert.crt -subj "/CN=www.bing.com"
-        domain="www.bing.com"
+        ${PACKAGE_INSTALL[int]} --install-recommends linux-generic-hwe-16.04
+        grub-set-default 0
+        echo "tcp_bbr" >> /etc/modules-load.d/modules.conf
     fi
 }
 
-protocol(){
-    green "Hysteria 协议如下："
-    echo ""
-    echo -e " ${GREEN}1.${PLAIN} UDP ${YELLOW}（默认）${PLAIN}"
-    echo -e " ${GREEN}2.${PLAIN} wechat-video"
-    echo -e " ${GREEN}3.${PLAIN} faketcp"
-    echo ""
-    read -rp "请输入选项 [1-3]: " protocolInput
-    if [[ $protocolInput == 2 ]]; then
-        hyprotocol="wechat-video"
-    elif [[ $protocolInput == 3 ]]; then
-        hyprotocol="faketcp"
+installHysteria() {
+    install_base
+    downloadHysteria
+    read -rp "是否安装BBR（y/n，默认n）：" INSTALL_BBR_YN
+    if [[ $INSTALL_BBR_YN =~ "y"|"Y" ]]; then
+        installBBR
+    fi
+    makeConfig
+    systemctl enable hysteria
+    systemctl start hysteria
+    check_status
+    if [[ -n $(service hysteria status 2>/dev/null | grep "inactive") ]]; then
+        red "Hysteria 服务器安装失败"
+    elif [[ -n $(service hysteria status 2>/dev/null | grep "active") ]]; then
+        show_usage
+        green "Hysteria 服务器安装成功"
+        yellow "服务器配置文件已保存到 /root/hy/server.json"
+        yellow "客户端配置文件已保存到 /root/hy/client.json"
+        yellow "V2rayN 代理规则分流配置文件已保存到 /root/hy/v2rayn.json"
+        yellow "SagerNet / ShadowRocket 分享链接如下: "
+        green "$url"
+    fi
+}
+
+start_hysteria() {
+    systemctl start hysteria
+    green "Hysteria 已启动！"
+}
+
+stop_hysteria() {
+    systemctl stop hysteria
+    green "Hysteria 已停止！"
+}
+
+restart(){
+    systemctl restart hysteria
+    green "Hysteria 已重启！"
+}
+
+view_log(){
+    service hysteria status
+}
+
+uninstall(){
+    systemctl stop hysteria
+    systemctl disable hysteria
+    rm -rf /root/hy
+    rm -f /usr/bin/hysteria /usr/local/bin/hy
+    rm -f /etc/systemd/system/hysteria.service
+    green "Hysteria 卸载完成！"
+}
+
+check_status(){
+    if [[ -n $(service hysteria status 2>/dev/null | grep "inactive") ]]; then
+        status="${RED}Hysteria 未启动！${PLAIN}"
+    elif [[ -n $(service hysteria status 2>/dev/null | grep "active") ]]; then
+        status="${GREEN}Hysteria 已启动！${PLAIN}"
     else
-        hyprotocol="udp"
+        status="${RED}未安装 Hysteria！${PLAIN}"
     fi
 }
 
-inst_port(){
-    read -rp "设置hysteria转发主端口[1-65535]（回车以使用随机端口）：" port
-    [[ -z $port ]] && port=$(shuf -i 2000-65535 -n 1)
-    until [[ -z $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$port") ]]; do
-        if [[ -n $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$port") ]]; then
-            echo -e "${RED} $port ${PLAIN} 端口已经被其他程序占用，请更换端口重试！"
-            read -rp "设置hysteria转发主端口[1-65535]（回车以使用随机端口）：" port
-            [[ -z $port ]] && port=$(shuf -i 2000-65535 -n 1)
-        fi
-    done
-
-    if [[ $hyprotocol == "udp" ]]; then
-        yellow "当前使用的是UDP协议，可支持端口跳跃功能"
-        green "请输入选项："
-        echo -e " ${GREEN}1.${PLAIN} 使用单端口 ${YELLOW}（默认）${PLAIN}"
-        echo -e " ${GREEN}2.${PLAIN} 使用端口跳跃"
-        read -rp "请输入选项 [1-2]: " portJumpInput
-    fi
+# 放开防火墙端口
+open_ports() {
+    systemctl stop firewalld.service 2>/dev/null
+    systemctl disable firewalld.service 2>/dev/null
+    setenforce 0 2>/dev/null
+    ufw disable 2>/dev/null
+    iptables -P INPUT ACCEPT 2>/dev/null
+    iptables -P FORWARD ACCEPT 2>/dev/null
+    iptables -P OUTPUT ACCEPT 2>/dev/null
+    iptables -t nat -F 2>/dev/null
+    iptables -t mangle -F 2>/dev/null
+    iptables -F 2>/dev/null
+    iptables -X 2>/dev/null
+    netfilter-persistent save 2>/dev/null
+    green "放开VPS网络防火墙端口成功！"
 }
 
-install_hysteria(){
-    systemctl stop hysteria-server
-    systemctl disable hysteria-server
-    rm -rf /usr/local/bin/hysteria /etc/hysteria /root/hy
-    wget -N https://raw.githubusercontent.com/apernet/hysteria/master/install_server.sh && bash install_server.sh
-    if [[ -f "/usr/local/bin/hysteria" ]]; then
-        green "已成功安装 Hysteria！ 当前内核版本号为：$(/usr/local/bin/hysteria -v | awk 'NR==1 {print $3}')"
-    fi
+# 禁用IPv6
+closeipv6() {
+    sed -i '/net.ipv6.conf.all.disable_ipv6/d' /etc/sysctl.d/99-sysctl.conf
+    sed -i '/net.ipv6.conf.default.disable_ipv6/d' /etc/sysctl.d/99-sysctl.conf
+    sed -i '/net.ipv6.conf.lo.disable_ipv6/d' /etc/sysctl.d/99-sysctl.conf
+    sed -i '/net.ipv6.conf.all.disable_ipv6/d' /etc/sysctl.conf
+    sed -i '/net.ipv6.conf.default.disable_ipv6/d' /etc/sysctl.conf
+    sed -i '/net.ipv6.conf.lo.disable_ipv6/d' /etc/sysctl.conf
+    echo "net.ipv6.conf.all.disable_ipv6 = 1
+net.ipv6.conf.default.disable_ipv6 = 1
+    net.ipv6.conf.lo.disable_ipv6 = 1" >>/etc/sysctl.d/99-sysctl.conf
+    sysctl --system
+    green "禁用IPv6结束，可能需要重启！"
+}
 
-    if [[ ! $virt =~ lxc|openvz ]]; then
-        sysctl -w net.core.rmem_max=8000000
-        sysctl -p
-    fi
-
-    inst_cert
-    protocol
-    inst_port
+# 开启IPv6
+openipv6() {
+    sed -i '/net.ipv6.conf.all.disable_ipv6/d' /etc/sysctl.d/99-sysctl.conf
+    sed -i '/net.ipv6.conf.default.disable_ipv6/d' /etc/sysctl.d/99-sysctl.conf
+    sed -i '/net.ipv6.conf.lo.disable_ipv6/d' /etc/sysctl.d/99-sysctl.conf
+    sed -i '/net.ipv6.conf.all.disable_ipv6/d' /etc/sysctl.conf
+    sed -i '/net.ipv6.conf.default.disable_ipv6/d' /etc/sysctl.conf
+    sed -i '/net.ipv6.conf.lo.disable_ipv6/d' /etc/sysctl.conf
+    echo "net.ipv6.conf.all.disable_ipv6 = 0
+net.ipv6.conf.default.disable_ipv6 = 0
+    net.ipv6.conf.lo.disable_ipv6 = 0" >>/etc/sysctl.d/99-sysctl.conf
+    sysctl --system
+    green "开启IPv6结束，可能需要重启！"
 }
 
 menu() {
     clear
     check_status
     echo "#############################################################"
-    echo -e "#                  ${RED}Hysteria 一键安装管理脚本${PLAIN}                #"
+    echo -e "#                   ${RED}Hysteria  一键安装脚本${PLAIN}                  #"
     echo -e "# ${GREEN}作者${PLAIN}: MisakaNo の 小破站                                  #"
     echo -e "# ${GREEN}博客${PLAIN}: https://blog.misaka.rest                            #"
     echo -e "# ${GREEN}GitHub 项目${PLAIN}: https://github.com/Misaka-blog               #"
+    echo -e "# ${GREEN}GitLab 项目${PLAIN}: https://gitlab.com/Misaka-blog               #"
     echo -e "# ${GREEN}Telegram 频道${PLAIN}: https://t.me/misakanocchannel              #"
     echo -e "# ${GREEN}Telegram 群组${PLAIN}: https://t.me/misakanoc                     #"
     echo -e "# ${GREEN}YouTube 频道${PLAIN}: https://www.youtube.com/@misaka-blog        #"
     echo "#############################################################"
     echo ""
-    yellow "注意：部分VPS服务器提供商有可能限制Hysteria协议的部署和使用，请谨慎部署"
-    echo ""
-    echo -e " ${GREEN}1.${PLAIN} 安装 Hysieria"
-    echo -e " ${GREEN}2.${PLAIN} ${RED}卸载 Hysieria${PLAIN}"
+    echo -e "  ${GREEN}1.${PLAIN} 安装Hysieria "
+    echo -e "  ${GREEN}2.${PLAIN} ${RED}卸载Hysieria ${PLAIN}"
     echo " -------------"
-    echo -e " ${GREEN}3.${PLAIN} 启动、关闭和重启 Hysieria"
-    echo -e " ${GREEN}4.${PLAIN} 修改 Hysteria 配置"
+    echo -e "  ${GREEN}3.${PLAIN} 启动Hysieria "
+    echo -e "  ${GREEN}4.${PLAIN} 重启Hysieria "
+    echo -e "  ${GREEN}5.${PLAIN} 停止Hysieria "
+    echo -e "  ${GREEN}6.${PLAIN} 查看Hysieria日志 "
     echo " -------------"
-    echo -e " ${GREEN}0.${PLAIN} 退出"
+    echo -e "  ${GREEN}7.${PLAIN} 启用IPv6 "
+    echo -e "  ${GREEN}8.${PLAIN} 禁用IPv6 "
+    echo -e "  ${GREEN}9.${PLAIN} 放行防火墙端口 "
+    echo " -------------"
+    echo -e "  ${GREEN}0.${PLAIN} 退出"
     echo ""
     echo -e "Hysteria 状态：$status"
     echo ""
-    read -rp " 请输入选项 [0-13] ：" answer
+    read -rp " 请选择操作[0-9]：" answer
     case $answer in
-        1) install_hysteria ;;
-        2) uninstall_hysteria ;;
-        *) red "请输入正确的选项 [0-13]！" && exit 1 ;;
+        1) installHysteria ;;
+        2) uninstall ;;
+        3) start_hysteria ;;
+        4) restart ;;
+        5) stop_hysteria ;;
+        6) view_log ;;
+        7) openipv6 ;;
+        8) closeipv6 ;;
+        9) open_ports ;;
+        *) red "请选择正确的操作！" && exit 1 ;;
     esac
 }
 
