@@ -78,7 +78,7 @@ insttuic(){
     fi
     ${PACKAGE_INSTALL} wget curl sudo
 
-    wget https://cdn.jsdelivr.net/gh/Misaka-blog/tuic-script/files/tuic-latest-linux-$(archAffix) -O /usr/local/bin/tuic
+    wget https://gitlab.com/Misaka-blog/tuic-script/-/raw/main/files/tuic-latest-linux-$(archAffix) -O /usr/local/bin/tuic
     if [[ -f "/usr/local/bin/tuic" ]]; then
         chmod +x /usr/local/bin/tuic
     else
@@ -199,7 +199,7 @@ EOF
     cat << EOF >/etc/systemd/system/tuic.service
 [Unit]
 Description=tuic Service
-Documentation=https://github.com/Misaka-blog/tuic-script
+Documentation=https://gitlab.com/Misaka-blog/tuic-script
 After=network.target
 [Service]
 User=root
@@ -247,7 +247,6 @@ stoptuic(){
 }
 
 tuicswitch(){
-    echo ""
     yellow "请选择你需要的操作："
     echo ""
     echo -e " ${GREEN}1.${PLAIN} 启动 Tuic"
@@ -320,6 +319,7 @@ menu() {
     echo -e "# ${GREEN}作者${PLAIN}: MisakaNo の 小破站                                  #"
     echo -e "# ${GREEN}博客${PLAIN}: https://blog.misaka.rest                            #"
     echo -e "# ${GREEN}GitHub 项目${PLAIN}: https://github.com/Misaka-blog               #"
+    echo -e "# ${GREEN}GitLab 项目${PLAIN}: https://gitlab.com/Misaka-blog               #"
     echo -e "# ${GREEN}Telegram 频道${PLAIN}: https://t.me/misakablogchannel             #"
     echo -e "# ${GREEN}Telegram 群组${PLAIN}: https://t.me/misakanoxpz                   #"
     echo -e "# ${GREEN}YouTube 频道${PLAIN}: https://www.youtube.com/@misaka-blog        #"
