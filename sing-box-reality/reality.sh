@@ -82,8 +82,22 @@ install_singbox(){
         exit 1
     fi
 
+    # 询问用户有关 Reality 端口、UUID 和回落域名
+    read -p "设置 Sing-box 端口 [1-65535]（回车则随机分配端口）：" port
+    [[ -z $port ]] && port=$(shuf -i 2000-65535 -n 1)
+    until [[ -z $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$port") ]]; do
+        if [[ -n $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$port") ]]; then
+            echo -e "${RED} $port ${PLAIN} 端口已经被其他程序占用，请更换端口重试！"
+            read -p "设置 Sing-box 端口 [1-65535]（回车则随机分配端口）：" port
+            [[ -z $port ]] && port=$(shuf -i 2000-65535 -n 1)
+        fi
+    done
     read -rp "请输入 UUID [可留空待脚本生成]: " UUID
     [[ -z $UUID ]] && UUID=$(sing-box generate uuid)
+    read -rp "请输入配置回落的域名 [默认微软官网]: " dest_server
+    [[ -z $dest_server ]] && dest_server="www.microsoft.com"
+
+    # Reality short-id
     short_id=$(openssl rand -hex 8)
 
     # Reality 公私钥
@@ -91,6 +105,7 @@ install_singbox(){
     private_key=$(echo $keys | awk -F " " '{print $2}')
     public_key=$(echo $keys | awk -F " " '{print $4}')
 
+    # 将默认的配置文件删除，并写入 Reality 配置
     rm -f /etc/sing-box/config.json
     cat << EOF > /etc/sing-box/config.json
 {
@@ -103,7 +118,7 @@ install_singbox(){
             "type": "vless",
             "tag": "vless-in",
             "listen": "::",
-            "listen_port": 443,
+            "listen_port": $port,
             "sniff": true,
             "sniff_override_destination": true,
             "users": [
@@ -172,7 +187,7 @@ EOF
     fi
 
     mkdir /root/sing-box >/dev/null 2>&1
-    share_link="vless://$UUID@$IP:443?encryption=none&flow=xtls-rprx-vision&security=reality&fp=chrome&pbk=$public_key&sid=$short_id&type=tcp&headerType=none&host=www.microsoft.com#Misaka-Reality"
+    share_link="vless://$UUID@$IP:$port?encryption=none&flow=xtls-rprx-vision&security=reality&fp=chrome&pbk=$public_key&sid=$short_id&type=tcp&headerType=none&host=www.microsoft.com#Misaka-Reality"
     echo ${share_link} > /root/sing-box/share-link.txt
 
     systemctl start sing-box >/dev/null 2>&1
@@ -186,6 +201,84 @@ EOF
 
     yellow "下面是 Sing-box Reality 的分享链接，并已保存至 /root/sing-box/share-link.txt"
     red $share_link
+}
+
+uninstall_singbox(){
+    ${PACKAGE_UNINSTALL} sing-box
+    rm -rf /root/sing-box
+    green "Sing-box 已彻底卸载成功！"
+}
+
+start_singbox(){
+    systemctl start sing-box
+    systemctl enable sing-box >/dev/null 2>&1
+}
+
+stop_singbox(){
+    systemctl stop sing-box
+    systemctl disable sing-box >/dev/null 2>&1
+}
+
+changeport(){
+    old_port=$(cat /etc/sing-box/config.json | grep listen_port | awk -F ": " '{print $2}' | sed "s/,//g")
+
+    read -p "设置 Sing-box 端口 [1-65535]（回车则随机分配端口）：" port
+    [[ -z $port ]] && port=$(shuf -i 2000-65535 -n 1)
+    until [[ -z $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$port") ]]; do
+        if [[ -n $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$port") ]]; then
+            echo -e "${RED} $port ${PLAIN} 端口已经被其他程序占用，请更换端口重试！"
+            read -p "设置 Sing-box 端口 [1-65535]（回车则随机分配端口）：" port
+            [[ -z $port ]] && port=$(shuf -i 2000-65535 -n 1)
+        fi
+    done
+
+    sed -i "s/$old_port/$port/g" /etc/sing-box/config.json
+    sed -i "s/$old_port/$port/g" /root/sing-box/share-link.txt
+    stop_singbox && start_singbox
+
+    green "Sing-box 端口已修改成功！"
+}
+
+changeuuid(){
+    old_uuid=$(cat /etc/sing-box/config.json | grep uuid | awk -F ": " '{print $2}' | sed "s/\"//g" | sed "s/,//g")
+
+    read -rp "请输入 UUID [可留空待脚本生成]: " UUID
+    [[ -z $UUID ]] && UUID=$(sing-box generate uuid)
+
+    sed -i "s/$old_uuid/$UUID/g" /etc/sing-box/config.json
+    sed -i "s/$old_uuid/$UUID/g" /root/sing-box/share-link.txt
+    stop_singbox && start_singbox
+
+    green "Sing-box UUID 已修改成功！"
+}
+
+changedest(){
+    old_dest_1=$(cat /etc/sing-box/config.json | grep server | sed -n 2p | awk -F ": " '{print $2}' | sed "s/\"//g" | sed "s/,//g")
+    old_dest_2=$(cat /etc/sing-box/config.json | grep server | sed -n 2p | awk -F ": " '{print $2}' | sed "s/\"//g" | sed "s/,//g")
+
+    read -rp "请输入 UUID [可留空待脚本生成]: " UUID
+    [[ -z $UUID ]] && UUID=$(sing-box generate uuid)
+
+    sed -i "s/$old_dest_1/$UUID/g" /etc/sing-box/config.json
+    sed -i "s/$old_uuid/$UUID/g" /root/sing-box/share-link.txt
+    stop_singbox && start_singbox
+
+    green "Sing-box UUID 已修改成功！"
+}
+
+change_conf(){
+    green "Sing-box 配置变更选择如下:"
+    echo -e " ${GREEN}1.${PLAIN} 修改端口"
+    echo -e " ${GREEN}2.${PLAIN} 修改UUID"
+    echo -e " ${GREEN}3.${PLAIN} 修改回落域名"
+    echo ""
+    read -p " 请选择操作 [1-3]: " confAnswer
+    case $confAnswer in
+        1 ) changeport ;;
+        2 ) changeuuid ;;
+        3 ) changedest ;;
+        * ) exit 1 ;;
+    esac
 }
 
 menu(){
@@ -215,6 +308,11 @@ menu(){
     read -rp " 请输入选项 [0-6] ：" answer
     case $answer in
         1) install_singbox ;;
+        2) uninstall_singbox ;;
+        3) start_singbox ;;
+        4) stop_singbox ;;
+        5) stop_singbox && start_singbox ;;
+        6) change_conf ;;
         *) red "请输入正确的选项 [0-6]！" && exit 1 ;;
     esac
 }
