@@ -187,6 +187,7 @@ EOF
     fi
 
     mkdir /root/sing-box >/dev/null 2>&1
+    
     share_link="vless://$UUID@$IP:$port?encryption=none&flow=xtls-rprx-vision&security=reality&fp=chrome&pbk=$public_key&sid=$short_id&type=tcp&headerType=none&host=www.microsoft.com#Misaka-Reality"
     echo ${share_link} > /root/sing-box/share-link.txt
 
@@ -253,17 +254,18 @@ changeuuid(){
 }
 
 changedest(){
-    old_dest_1=$(cat /etc/sing-box/config.json | grep server | sed -n 2p | awk -F ": " '{print $2}' | sed "s/\"//g" | sed "s/,//g")
+    old_dest_1=$(cat /etc/sing-box/config.json | grep server | sed -n 1p | awk -F ": " '{print $2}' | sed "s/\"//g" | sed "s/,//g")
     old_dest_2=$(cat /etc/sing-box/config.json | grep server | sed -n 2p | awk -F ": " '{print $2}' | sed "s/\"//g" | sed "s/,//g")
 
-    read -rp "请输入 UUID [可留空待脚本生成]: " UUID
-    [[ -z $UUID ]] && UUID=$(sing-box generate uuid)
+    read -rp "请输入配置回落的域名 [默认微软官网]: " dest_server
+    [[ -z $dest_server ]] && dest_server="www.microsoft.com"
 
-    sed -i "s/$old_dest_1/$UUID/g" /etc/sing-box/config.json
-    sed -i "s/$old_uuid/$UUID/g" /root/sing-box/share-link.txt
+    sed -i "s/$old_dest_1/$dest_server/g" /etc/sing-box/config.json
+    sed -i "s/$old_dest_2/$dest_server/g" /etc/sing-box/config.json
+    sed -i "s/$old_dest_1/$dest_server/g" /root/sing-box/share-link.txt
     stop_singbox && start_singbox
 
-    green "Sing-box UUID 已修改成功！"
+    green "Sing-box 回落域名已修改成功！"
 }
 
 change_conf(){
