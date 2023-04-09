@@ -198,6 +198,12 @@ EOF
     red "$(cat /root/mieru/client_config.json)\n"
 }
 
+unst_mita(){
+    mita stop
+    ${PACKAGE_UNINSTALL[int]} mita
+    green "mieru 已彻底卸载完成"
+}
+
 menu() {
     clear
     echo "#############################################################"
