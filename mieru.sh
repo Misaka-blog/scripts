@@ -62,9 +62,9 @@ inst_mita(){
         rpm -ivh mita-$last_version-1.$arch.rpm
         rm -f mita-$last_version-1.$arch.rpm
     else
-        wget -N https://github.com/enfein/mieru/releases/download/v"$last_version"/mieru_"$last_version"_$(archAffix).deb
-        dpkg -i mieru_"$last_version"_$(archAffix).deb
-        rm -f mieru_"$last_version"_$(archAffix).deb
+        wget -N https://github.com/enfein/mieru/releases/download/v"$last_version"/mita_"$last_version"_$(archAffix).deb
+        dpkg -i mita_"$last_version"_$(archAffix).deb
+        rm -f mita_"$last_version"_$(archAffix).deb
     fi
 
     cat <<EOF > server_config.json
@@ -95,7 +95,7 @@ EOF
 menu() {
     clear
     echo "#############################################################"
-    echo -e "#                  ${RED}mieru 一键安装脚本${PLAIN}                      #"
+    echo -e "#                   ${RED}mieru 一键安装脚本${PLAIN}                      #"
     echo -e "# ${GREEN}作者${PLAIN}: MisakaNo の 小破站                                  #"
     echo -e "# ${GREEN}博客${PLAIN}: https://blog.misaka.rest                            #"
     echo -e "# ${GREEN}GitHub 项目${PLAIN}: https://github.com/Misaka-blog               #"
