@@ -49,6 +49,11 @@ archAffix(){
     esac
 }
 
+check_ip() {
+    ipv4=$(curl -s4m8 ip.p3terx.com | sed -n 1p)
+    ipv6=$(curl -s6m8 ip.p3terx.com | sed -n 1p)
+}
+
 inst_mita(){
     if [[ ! $SYSTEM == "CentOS" ]]; then
         ${PACKAGE_UPDATE[int]}
@@ -67,29 +72,130 @@ inst_mita(){
         rm -f mita_"$last_version"_$(archAffix).deb
     fi
 
+    read -p "设置 mieru 端口[1-65535]（回车则随机分配端口）：" port
+    [[ -z $port ]] && port=$(shuf -i 2000-65535 -n 1)
+    until [[ -z $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$port") ]]; do
+        if [[ -n $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$port") ]]; then
+            echo -e "${RED} $port ${PLAIN} 端口已经被其他程序占用，请更换端口重试！"
+            read -p "设置 mieru 端口[1-65535]（回车则随机分配端口）：" port
+            [[ -z $port ]] && port=$(shuf -i 2000-65535 -n 1)
+        fi
+    done
+
+    read -rp "请输入代理认证用户名 [留空随机生成]：" user_name
+    [[ -z $user_name ]] && user_name=$(date +%s%N | md5sum | cut -c 1-8)
+    read -rp "请输入代理认证密码 [留空随机生成]：" auth_pass
+    [[ -z $auth_pass ]] && auth_pass=$(date +%s%N | md5sum | cut -c 1-8)
+
+    yellow "正在检测并设置 MTU 最佳值, 请稍等..."
+    check_ip
+    MTUy=1500
+    MTUc=10
+    if [[ -n ${ipv6} && -z ${ipv4} ]]; then
+        ping='ping6'
+        IP1='2606:4700:4700::1001'
+        IP2='2001:4860:4860::8888'
+    else
+        ping='ping'
+        IP1='1.1.1.1'
+        IP2='8.8.8.8'
+    fi
+    while true; do
+        if ${ping} -c1 -W1 -s$((${MTUy} - 28)) -Mdo ${IP1} >/dev/null 2>&1 || ${ping} -c1 -W1 -s$((${MTUy} - 28)) -Mdo ${IP2} >/dev/null 2>&1; then
+            MTUc=1
+            MTUy=$((${MTUy} + ${MTUc}))
+        else
+            MTUy=$((${MTUy} - ${MTUc}))
+            if [[ ${MTUc} = 1 ]]; then
+                break
+            fi
+        fi
+        if [[ ${MTUy} -le 1360 ]]; then
+            MTUy='1360'
+            break
+        fi
+    done
+    # 将 MTU 最佳值放置至 MTU 变量中备用
+    MTU=$((${MTUy} - 80))
+    green "MTU 最佳值 = $MTU 已设置完毕！"
+
     cat <<EOF > server_config.json
 {
     "portBindings": [
         {
-            "port": 22345,
+            "port": $port,
             "protocol": "TCP"
         }
     ],
     "users": [
         {
-            "name": "pingzi",
-            "password": "solo220poundMaiZi"
+            "name": "$user_name",
+            "password": "$auth_pass"
         }
     ],
     "loggingLevel": "INFO",
-    "mtu": 1400
+    "mtu": $MTU
+}
+EOF
+    mita apply config server_config.json
+    rm -f server_config.json
+
+    warpv6=$(curl -s6m5 https://www.cloudflare.com/cdn-cgi/trace -k | grep warp | cut -d= -f2)
+    warpv4=$(curl -s4m5 https://www.cloudflare.com/cdn-cgi/trace -k | grep warp | cut -d= -f2)
+    if [[ $warpv4 =~ on|plus || $warpv6 =~ on|plus ]]; then
+        wg-quick down wgcf >/dev/null 2>&1
+        systemctl stop warp-go >/dev/null 2>&1
+        check_ip
+        systemctl start warp-go >/dev/null 2>&1
+        wg-quick up wgcf >/dev/null 2>&1
+    else
+        check_ip
+    fi
+
+    [[ -z $ipv4 ]] && ip=$ipv6 || ip=$ipv4
+
+    mkdir /root/mieru >/dev/null 2>&1
+    cat <<EOF > /root/mieru/client_config.json
+{
+    "profiles": [
+        {
+            "profileName": "default",
+            "user": {
+                "name": "$user_name",
+                "password": "$auth_pass"
+            },
+            "servers": [
+                {
+                    "ipAddress": "$ip",
+                    "domainName": "",
+                    "portBindings": [
+                        {
+                            "port": $port,
+                            "protocol": "TCP"
+                        }
+                    ]
+                }
+            ],
+            "mtu": 1400
+        }
+    ],
+    "activeProfile": "default",
+    "rpcPort": 8964,
+    "socks5Port": 3080,
+    "loggingLevel": "INFO"
 }
 EOF
 
-    mita apply config server_config.json
-
     mita start
-    mita status
+    result=$(mita status)
+
+    if [[ $result =~ "mieru server status is \"RUNNING\"" ]]; then
+        green "mieru 服务安装成功！"
+    else
+        red "mieru 服务启动失败，脚本退出！" && exit 1
+    fi
+    yellow "客户端配置如下，并已保存至 /root/mieru/client_config.json"
+    red "$(cat /root/mieru/client_config.json)\n"
 }
 
 menu() {
