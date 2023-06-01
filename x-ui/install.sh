@@ -156,7 +156,7 @@ install_x-ui() {
     if [[ -n $ipv6 ]]; then
         echo -e "${YELLOW}The panel IPv6 access address is:${PLAIN} ${GREEN}http://[$ipv6]:$config_port ${PLAIN}"
     fi
-    echo -e "Please make sure that this port is not occupied by another application, ${YELLOW} and that the ${PLAIN} ${RED} $config_port ${PLAIN} ${YELLOW} port is released ${PLAIN}"
+    echo -e "Please make sure that this port is not occupied by another application, ${YELLOW} and make sure ${PLAIN} ${RED} $config_port ${PLAIN} ${YELLOW} port is released ${PLAIN}"
 }
 
 echo -e "${GREEN}Begin installation${PLAIN}"
