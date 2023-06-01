@@ -37,11 +37,21 @@ archAffix() {
 }
 
 install_base() {
-    if [[ x"${RELEASE[int]}" == x"CentOS" ]]; then
-        ${PACKAGE_INSTALL[int]} install wget curl tar
+    if [[ $SYSTEM == "CentOS" ]]; then
+        ${PACKAGE_INSTALL[int]} wget curl tar
+    elif [[ $SYSTEM == "Alpine" ]]; then
+        ${PACKAGE_INSTALL[int]} wget curl tar openrc
     else
         ${PACKAGE_UPDATE[int]}
         ${PACKAGE_INSTALL[int]} wget curl tar
+    fi
+}
+
+check_sysctl(){
+    if [[ $SYSTEM == "Alpine" ]]; then
+        sysctl="rc-service"
+    else
+        sysctl="systemctl"
     fi
 }
 
@@ -78,7 +88,7 @@ config_after_install() {
 }
 
 install_x-ui() {
-    systemctl stop x-ui
+    $sysctl stop x-ui
     cd /usr/local/
 
     if [ $# == 0 ]; then
@@ -112,7 +122,39 @@ install_x-ui() {
     rm x-ui-linux-$(archAffix).tar.gz -f
     cd x-ui
     chmod +x x-ui bin/xray-linux-$(archAffix)
-    cp -f x-ui.service /etc/systemd/system/
+    
+    if [[ $SYSTEM == "Alpine" ]]; then
+        cat > /etc/init.d/x-ui <<EOF
+#!/sbin/openrc-run
+
+depend() {
+    need net
+}
+
+start() {
+    ebegin "Starting x-ui"
+    start-stop-daemon --start --exec /usr/local/x-ui/x-ui
+    eend $?
+}
+
+stop() {
+    ebegin "Stopping x-ui"
+    start-stop-daemon --stop --exec /usr/local/x-ui/x-ui
+    eend $?
+}
+
+restart() {
+    ebegin "Restarting x-ui"
+    start-stop-daemon --stop --exec /usr/local/x-ui/x-ui
+    sleep 1
+    start-stop-daemon --start --exec /usr/local/x-ui/x-ui
+    eend $?
+}
+EOF
+    else
+        cp -f x-ui.service /etc/systemd/system/
+    fi
+
     wget --no-check-certificate -O /usr/bin/x-ui https://raw.githubusercontent.com/sing-web/x-ui/main/x-ui.sh
     chmod +x /usr/local/x-ui/x-ui.sh
     chmod +x /usr/bin/x-ui
@@ -123,15 +165,16 @@ install_x-ui() {
     #echo -e ""
     #echo -e "如果是更新面板，则按你之前的方式访问面板"
     #echo -e ""
-    systemctl daemon-reload
-    systemctl enable x-ui
-    systemctl start x-ui
     
-    systemctl stop warp-go >/dev/null 2>&1
+    $sysctl daemon-reload
+    $sysctl enable x-ui
+    $sysctl start x-ui
+    
+    $sysctl stop warp-go >/dev/null 2>&1
     wg-quick down wgcf >/dev/null 2>&1
     ipv4=$(curl -s4m8 ip.p3terx.com -k | sed -n 1p)
     ipv6=$(curl -s6m8 ip.p3terx.com -k | sed -n 1p)
-    systemctl start warp-go >/dev/null 2>&1
+    $sysctl start warp-go >/dev/null 2>&1
     wg-quick up wgcf >/dev/null 2>&1
     echo -e "${GREEN}x-ui ${last_version}${PLAIN} Installation completed, panel started"
     echo -e ""
@@ -160,5 +203,6 @@ install_x-ui() {
 }
 
 echo -e "${GREEN}Begin installation${PLAIN}"
+check_sysctl
 install_base
 install_x-ui $1
