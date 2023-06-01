@@ -148,8 +148,11 @@ EOF
     fi
 
     wget --no-check-certificate -O /usr/bin/x-ui https://raw.githubusercontent.com/sing-web/x-ui/main/x-ui.sh
+
     chmod +x /usr/local/x-ui/x-ui.sh
+    chmod +x /usr/local/x-ui/x-ui
     chmod +x /usr/bin/x-ui
+
     config_after_install
     #echo -e "如果是全新安装，默认网页端口为 ${GREEN}54321${PLAIN}，用户名和密码默认都是 ${GREEN}admin${PLAIN}"
     #echo -e "请自行确保此端口没有被其他程序占用，${YELLOW}并且确保 54321 端口已放行${PLAIN}"
