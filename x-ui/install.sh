@@ -27,6 +27,15 @@ done
 
 [[ -z $SYSTEM ]] && red "不支持当前VPS系统, 请使用主流的操作系统" && exit 1
 
+archAffix() {
+    case "$(uname -m)" in
+        x86_64 | amd64) echo 'amd64' ;;
+        armv8 | arm64 | aarch64) echo 'arm64' ;;
+        s390x) echo 's390x' ;;
+        *) red "不支持的CPU架构!" && exit 1 ;;
+    esac
+}
+
 install_base() {
     if [[ x"${RELEASE[int]}" == x"CentOS" ]]; then
         ${PACKAGE_INSTALL[int]} install wget curl tar
@@ -79,16 +88,16 @@ install_x-ui() {
             exit 1
         fi
         echo -e "The latest version of x-ui is detected: ${last_version}, start installation"
-        wget -N --no-check-certificate -O /usr/local/x-ui-linux-${arch}.tar.gz https://github.com/sing-web/x-ui/releases/download/${last_version}/x-ui-linux-${arch}.tar.gz
+        wget -N --no-check-certificate -O /usr/local/x-ui-linux-$(archAffix).tar.gz https://github.com/sing-web/x-ui/releases/download/${last_version}/x-ui-linux-$(archAffix).tar.gz
         if [[ $? -ne 0 ]]; then
             echo -e "${RED}Downloading x-ui failed, please make sure your server can download the Github file${PLAIN}"
             exit 1
         fi
     else
         last_version=$1
-        url="https://github.com/sing-web/x-ui/releases/download/${last_version}/x-ui-linux-${arch}.tar.gz"
+        url="https://github.com/sing-web/x-ui/releases/download/${last_version}/x-ui-linux-$(archAffix).tar.gz"
         echo -e "Start installing x-ui $1"
-        wget -N --no-check-certificate -O /usr/local/x-ui-linux-${arch}.tar.gz ${url}
+        wget -N --no-check-certificate -O /usr/local/x-ui-linux-$(archAffix).tar.gz ${url}
         if [[ $? -ne 0 ]]; then
             echo -e "${RED}Downloading x-ui v$1 failed, please make sure this version exists${PLAIN}"
             exit 1
@@ -99,10 +108,10 @@ install_x-ui() {
         rm /usr/local/x-ui/ -rf
     fi
 
-    tar zxvf x-ui-linux-${arch}.tar.gz
-    rm x-ui-linux-${arch}.tar.gz -f
+    tar zxvf x-ui-linux-$(archAffix).tar.gz
+    rm x-ui-linux-$(archAffix).tar.gz -f
     cd x-ui
-    chmod +x x-ui bin/xray-linux-${arch}
+    chmod +x x-ui bin/xray-linux-$(archAffix)
     cp -f x-ui.service /etc/systemd/system/
     wget --no-check-certificate -O /usr/bin/x-ui https://raw.githubusercontent.com/sing-web/x-ui/main/x-ui.sh
     chmod +x /usr/local/x-ui/x-ui.sh
