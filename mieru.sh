@@ -72,6 +72,34 @@ inst_mita(){
         rm -f mita_"$last_version"_$(archAffix).deb
     fi
 
+    edit_conf
+}
+
+unst_mita(){
+    mita stop
+    ${PACKAGE_UNINSTALL[int]} mita
+    green "mieru 已彻底卸载完成"
+}
+
+mita_switch(){
+    yellow "请选择你需要的操作："
+    echo ""
+    echo -e " ${GREEN}1.${PLAIN} 启动 mieru"
+    echo -e " ${GREEN}2.${PLAIN} 关闭 mieru"
+    echo -e " ${GREEN}3.${PLAIN} 重启 mieru"
+    echo ""
+    read -rp "请输入选项 [0-3]: " switchInput
+    case $switchInput in
+        1 ) mita start ;;
+        2 ) mita stop ;;
+        3 ) mita stop && mita start ;;
+        * ) exit 1 ;;
+    esac
+}
+
+edit_conf(){
+    mita stop
+
     read -p "设置 mieru 端口[1-65535]（回车则随机分配端口）：" port
     [[ -z $port ]] && port=$(shuf -i 2000-65535 -n 1)
     until [[ -z $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$port") ]]; do
@@ -154,6 +182,7 @@ EOF
 
     [[ -z $ipv4 ]] && ip=$ipv6 || ip=$ipv4
 
+    rm -rf /root/mieru
     mkdir /root/mieru >/dev/null 2>&1
     cat <<EOF > /root/mieru/client_config.json
 {
@@ -198,10 +227,9 @@ EOF
     red "$(cat /root/mieru/client_config.json)\n"
 }
 
-unst_mita(){
-    mita stop
-    ${PACKAGE_UNINSTALL[int]} mita
-    green "mieru 已彻底卸载完成"
+show_conf(){
+    yellow "客户端配置如下，并已保存至 /root/mieru/client_config.json"
+    red "$(cat /root/mieru/client_config.json)\n"
 }
 
 menu() {
