@@ -1,14 +1,14 @@
 #!/bin/bash
 
-red='\033[0;31m'
-green='\033[0;32m'
-yellow='\033[0;33m'
-plain='\033[0m'
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+PLAIN='\033[0m'
 
 cur_dir=$(pwd)
 
 # check root
-[[ $EUID -ne 0 ]] && echo -e "${red} error: ${plain} Must run this script with root user!\n" && exit 1
+[[ $EUID -ne 0 ]] && echo -e "${RED} error: ${PLAIN} Must run this script with root user!\n" && exit 1
 
 # check os
 if [[ -f /etc/redhat-release ]]; then
@@ -26,7 +26,7 @@ elif cat /proc/version | grep -Eqi "ubuntu"; then
 elif cat /proc/version | grep -Eqi "centos|red hat|redhat"; then
     release="centos"
 else
-    echo -e "${red}No system version detected, please contact the script author!${plain}\n" && exit 1
+    echo -e "${RED}No system version detected, please contact the script author!${PLAIN}\n" && exit 1
 fi
 
 arch=$(arch)
@@ -41,7 +41,7 @@ elif [[ $arch == "s390x" ]]; then
     arch="s390x"
 else
     arch="amd64"
-    echo -e "${red}Failed to detect architecture, use default architecture: ${arch}${plain}"
+    echo -e "${RED}Failed to detect architecture, use default architecture: ${arch}${PLAIN}"
 fi
 
 echo "Arch: ${arch}"
@@ -58,15 +58,15 @@ fi
 
 if [[ x"${release}" == x"centos" ]]; then
     if [[ ${os_version} -le 6 ]]; then
-        echo -e "${red}Please use CentOS 7 or higher!${plain}\n" && exit 1
+        echo -e "${RED}Please use CentOS 7 or higher!${PLAIN}\n" && exit 1
     fi
 elif [[ x"${release}" == x"ubuntu" ]]; then
     if [[ ${os_version} -lt 16 ]]; then
-        echo -e "${red}Please use Ubuntu 16 or higher!${plain}\n" && exit 1
+        echo -e "${RED}Please use Ubuntu 16 or higher!${PLAIN}\n" && exit 1
     fi
 elif [[ x"${release}" == x"debian" ]]; then
     if [[ ${os_version} -lt 8 ]]; then
-        echo -e "${red}Please use Debian 8 or higher!${plain}\n" && exit 1
+        echo -e "${RED}Please use Debian 8 or higher!${PLAIN}\n" && exit 1
     fi
 fi
 
@@ -81,33 +81,33 @@ install_base() {
 
 # This function will be called when user installed x-ui out of sercurity
 config_after_install() {
-    echo -e "${yellow}For security reasons, you need to force a port and account password change after the installation/update is complete ${plain}"
+    echo -e "${YELLOW}For security reasons, you need to force a port and account password change after the installation/update is complete ${PLAIN}"
     read -p "Confirmation to continue? [y/n]: " config_confirm
     if [[ x"${config_confirm}" == x"y" || x"${config_confirm}" == x"Y" ]]; then
         read -p "Please set your account name (8 random characters if not filled in): " config_account
         [[ -z $config_account ]] && config_account=$(date +%s%N | md5sum | cut -c 1-8)
-        echo -e "${yellow} your account name will be set to: ${config_account}${plain}"
+        echo -e "${YELLOW} your account name will be set to: ${config_account}${PLAIN}"
         read -p "Please set your account password (8 random characters if not filled in): " config_password
         [[ -z $config_password ]] && config_password=$(date +%s%N | md5sum | cut -c 1-8)
-        echo -e "${yellow} your account password will be set to:${config_password}${plain}"
+        echo -e "${YELLOW} your account password will be set to:${config_password}${PLAIN}"
         read -p "Please set the panel access port (or random port number if not filled in): " config_port
         [[ -z $config_port ]] && config_port=$(shuf -i 2000-65535 -n 1)
         until [[ -z $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$port") ]]; do
             if [[ -n $(ss -ntlp | awk '{print $4}' | sed 's/.*://g' | grep -w "$port") ]]; then
-                echo -e "${red} $config_port ${plain} The port is already occupied by another program, please change the panel port number"
+                echo -e "${RED} $config_port ${PLAIN} The port is already occupied by another program, please change the panel port number"
                 read -p "Please set the panel access port (or random port number if not filled in): " config_port
                 [[ -z $config_port ]] && config_port=$(shuf -i 2000-65535 -n 1)
             fi
         done
-        echo -e "${yellow} your panel access port will be set to:${config_port}${plain}"
-        echo -e "${yellow}Confirm setting, setting in ${plain}"
+        echo -e "${YELLOW} your panel access port will be set to:${config_port}${PLAIN}"
+        echo -e "${YELLOW}Confirm setting, setting in ${PLAIN}"
         /usr/local/x-ui/x-ui setting -username ${config_account} -password ${config_password}
-        echo -e "${yellow} account password setting complete ${plain}"
+        echo -e "${YELLOW} account password setting complete ${PLAIN}"
         /usr/local/x-ui/x-ui setting -port ${config_port}
-        echo -e "${yellow} panel port setting complete ${plain}"
+        echo -e "${YELLOW} panel port setting complete ${PLAIN}"
     else
         config_port=$(/usr/local/x-ui/x-ui setting -show | sed -n 4p | awk -F ": " '{print $2}')
-        echo -e "${red}Account setting got cancelled, all settings are default, please change it as soon as possible!${plain}"
+        echo -e "${RED}Account setting got cancelled, all settings are default, please change it as soon as possible!${PLAIN}"
     fi
 }
 
@@ -118,13 +118,13 @@ install_x-ui() {
     if [ $# == 0 ]; then
         last_version=$(curl -Ls "https://api.github.com/repos/sing-web/x-ui/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
         if [[ ! -n "$last_version" ]]; then
-            echo -e "${red}Failed to detect x-ui version, may be out of Github API limit, please try again later, or manually specify x-ui version to install${plain}"
+            echo -e "${RED}Failed to detect x-ui version, may be out of Github API limit, please try again later, or manually specify x-ui version to install${PLAIN}"
             exit 1
         fi
         echo -e "The latest version of x-ui is detected: ${last_version}, start installation"
         wget -N --no-check-certificate -O /usr/local/x-ui-linux-${arch}.tar.gz https://github.com/sing-web/x-ui/releases/download/${last_version}/x-ui-linux-${arch}.tar.gz
         if [[ $? -ne 0 ]]; then
-            echo -e "${red}Downloading x-ui failed, please make sure your server can download the Github file${plain}"
+            echo -e "${RED}Downloading x-ui failed, please make sure your server can download the Github file${PLAIN}"
             exit 1
         fi
     else
@@ -133,7 +133,7 @@ install_x-ui() {
         echo -e "Start installing x-ui $1"
         wget -N --no-check-certificate -O /usr/local/x-ui-linux-${arch}.tar.gz ${url}
         if [[ $? -ne 0 ]]; then
-            echo -e "${red}Downloading x-ui v$1 failed, please make sure this version exists${plain}"
+            echo -e "${RED}Downloading x-ui v$1 failed, please make sure this version exists${PLAIN}"
             exit 1
         fi
     fi
@@ -151,8 +151,8 @@ install_x-ui() {
     chmod +x /usr/local/x-ui/x-ui.sh
     chmod +x /usr/bin/x-ui
     config_after_install
-    #echo -e "如果是全新安装，默认网页端口为 ${green}54321${plain}，用户名和密码默认都是 ${green}admin${plain}"
-    #echo -e "请自行确保此端口没有被其他程序占用，${yellow}并且确保 54321 端口已放行${plain}"
+    #echo -e "如果是全新安装，默认网页端口为 ${GREEN}54321${PLAIN}，用户名和密码默认都是 ${GREEN}admin${PLAIN}"
+    #echo -e "请自行确保此端口没有被其他程序占用，${YELLOW}并且确保 54321 端口已放行${PLAIN}"
     #    echo -e "若想将 54321 修改为其它端口，输入 x-ui 命令进行修改，同样也要确保你修改的端口也是放行的"
     #echo -e ""
     #echo -e "如果是更新面板，则按你之前的方式访问面板"
@@ -167,7 +167,7 @@ install_x-ui() {
     ipv6=$(curl -s6m8 ip.p3terx.com -k | sed -n 1p)
     systemctl start warp-go >/dev/null 2>&1
     wg-quick up wgcf >/dev/null 2>&1
-    echo -e "${green}x-ui ${last_version}${plain} Installation completed, panel started"
+    echo -e "${GREEN}x-ui ${last_version}${PLAIN} Installation completed, panel started"
     echo -e ""
     echo -e "How to use the x-ui administration script: "
     echo -e "----------------------------------------------"
@@ -185,14 +185,14 @@ install_x-ui() {
     echo -e "----------------------------------------------"
     echo ""
     if [[ -n $ipv4 ]]; then
-        echo -e "${yellow}The panel IPv4 access address is:${plain} ${green}http://$ipv4:$config_port ${plain}"
+        echo -e "${YELLOW}The panel IPv4 access address is:${PLAIN} ${GREEN}http://$ipv4:$config_port ${PLAIN}"
     fi
     if [[ -n $ipv6 ]]; then
-        echo -e "${yellow}The panel IPv6 access address is:${plain} ${green}http://[$ipv6]:$config_port ${plain}"
+        echo -e "${YELLOW}The panel IPv6 access address is:${PLAIN} ${GREEN}http://[$ipv6]:$config_port ${PLAIN}"
     fi
-    echo -e "Please make sure that this port is not occupied by another application, ${yellow} and that the ${plain} ${red} $config_port ${plain} ${yellow} port is released ${plain}"
+    echo -e "Please make sure that this port is not occupied by another application, ${YELLOW} and that the ${PLAIN} ${RED} $config_port ${PLAIN} ${YELLOW} port is released ${PLAIN}"
 }
 
-echo -e "${green}Begin installation${plain}"
+echo -e "${GREEN}Begin installation${PLAIN}"
 install_base
 install_x-ui $1
