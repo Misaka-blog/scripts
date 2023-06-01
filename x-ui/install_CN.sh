@@ -37,8 +37,10 @@ archAffix() {
 }
 
 install_base() {
-    if [[ x"${RELEASE[int]}" == x"CentOS" ]]; then
-        ${PACKAGE_INSTALL[int]} install wget curl tar
+    if [[ $SYSTEM == "CentOS" ]]; then
+        ${PACKAGE_INSTALL[int]} wget curl tar
+    elif [[ $SYSTEM == "Alpine" ]]; then
+        ${PACKAGE_INSTALL[int]} wget curl tar openrc
     else
         ${PACKAGE_UPDATE[int]}
         ${PACKAGE_INSTALL[int]} wget curl tar
