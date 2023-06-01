@@ -47,14 +47,6 @@ install_base() {
     fi
 }
 
-check_sysctl(){
-    if [[ $SYSTEM == "Alpine" ]]; then
-        sysctl="rc-service"
-    else
-        sysctl="systemctl"
-    fi
-}
-
 # This function will be called when user installed x-ui out of sercurity
 config_after_install() {
     echo -e "${YELLOW}For security reasons, you need to force a port and account password change after the installation/update is complete ${PLAIN}"
@@ -88,7 +80,7 @@ config_after_install() {
 }
 
 install_x-ui() {
-    $sysctl stop x-ui
+    [[ $SYSTEM == "Alpine" ]] && rc-service x-ui stop || systemctl stop x-ui
     cd /usr/local/
 
     if [ $# == 0 ]; then
@@ -165,16 +157,15 @@ EOF
     #echo -e ""
     #echo -e "如果是更新面板，则按你之前的方式访问面板"
     #echo -e ""
+    [[ $SYSTEM == "Alpine" ]] && echo "ok" || systemctl daemon-reload
+    [[ $SYSTEM == "Alpine" ]] && rc-update add x-ui || systemctl enable x-ui
+    [[ $SYSTEM == "Alpine" ]] && rc-service x-ui start || systemctl start x-ui
     
-    $sysctl daemon-reload
-    $sysctl enable x-ui
-    $sysctl start x-ui
-    
-    $sysctl stop warp-go >/dev/null 2>&1
+    [[ $SYSTEM == "Alpine" ]] && rc-service warp-go stop || systemctl stop warp-go >/dev/null 2>&1
     wg-quick down wgcf >/dev/null 2>&1
     ipv4=$(curl -s4m8 ip.p3terx.com -k | sed -n 1p)
     ipv6=$(curl -s6m8 ip.p3terx.com -k | sed -n 1p)
-    $sysctl start warp-go >/dev/null 2>&1
+    [[ $SYSTEM == "Alpine" ]] && rc-service warp-go start || systemctl start warp-go >/dev/null 2>&1
     wg-quick up wgcf >/dev/null 2>&1
     echo -e "${GREEN}x-ui ${last_version}${PLAIN} Installation completed, panel started"
     echo -e ""
@@ -203,6 +194,5 @@ EOF
 }
 
 echo -e "${GREEN}Begin installation${PLAIN}"
-check_sysctl
 install_base
 install_x-ui $1
