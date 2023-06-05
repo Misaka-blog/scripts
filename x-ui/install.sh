@@ -1,5 +1,7 @@
 #!/bin/bash
 
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -155,7 +157,7 @@ EOF
     #echo -e ""
     #echo -e "如果是更新面板，则按你之前的方式访问面板"
     #echo -e ""
-    [[ $SYSTEM == "Alpine" ]] && echo "ok" || systemctl daemon-reload
+    [[ $SYSTEM == "Alpine" ]] && chmod a+x /etc/init.d/x-ui || systemctl daemon-reload
     [[ $SYSTEM == "Alpine" ]] && rc-update add x-ui || systemctl enable x-ui
     [[ $SYSTEM == "Alpine" ]] && rc-service x-ui start || systemctl start x-ui
     
