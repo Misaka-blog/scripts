@@ -80,7 +80,7 @@ config_after_install() {
 }
 
 install_x-ui() {
-    [[ $SYSTEM == "Alpine" ]] && rc-service x-ui stop || systemctl stop x-ui
+    [[ $SYSTEM == "Alpine" ]] && rc-service x-ui stop && rc-update del x-ui default || systemctl stop x-ui
     cd /usr/local/
 
     if [ $# == 0 ]; then
@@ -118,29 +118,24 @@ install_x-ui() {
     if [[ $SYSTEM == "Alpine" ]]; then
         cat > /etc/init.d/x-ui <<EOF
 #!/sbin/openrc-run
+description="x-ui Service"
+command="/usr/local/x-ui/x-ui"
+command_args=""
+pidfile="/var/run/x-ui.pid"
+name="x-ui"
+command_background=true
 
 depend() {
     need net
 }
 
 start() {
-    ebegin "Starting x-ui"
-    start-stop-daemon --start --exec /usr/local/x-ui/x-ui
-    eend $?
+    cd /usr/local/x-ui/
+    start-stop-daemon --start --pidfile $pidfile --make-pidfile --background --exec $command -- $command_args
 }
 
 stop() {
-    ebegin "Stopping x-ui"
-    start-stop-daemon --stop --exec /usr/local/x-ui/x-ui
-    eend $?
-}
-
-restart() {
-    ebegin "Restarting x-ui"
-    start-stop-daemon --stop --exec /usr/local/x-ui/x-ui
-    sleep 1
-    start-stop-daemon --start --exec /usr/local/x-ui/x-ui
-    eend $?
+    start-stop-daemon --stop --pidfile $pidfile --exec $command
 }
 EOF
     else
