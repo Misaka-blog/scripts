@@ -146,9 +146,9 @@ EOF
 
     wget --no-check-certificate -O /usr/bin/x-ui https://raw.githubusercontent.com/sing-web/x-ui/main/x-ui.sh
 
-    chmod +x /usr/local/x-ui/x-ui.sh
-    chmod +x /usr/local/x-ui/x-ui
-    chmod +x /usr/bin/x-ui
+    [[ $SYSTEM == "Alpine" ]] && chmod a+x /usr/local/x-ui/x-ui.sh || chmod +x /usr/local/x-ui/x-ui.sh
+    [[ $SYSTEM == "Alpine" ]] && chmod a+x /usr/local/x-ui/x-ui || chmod +x /usr/local/x-ui/x-ui
+    [[ $SYSTEM == "Alpine" ]] && chmod a+x /usr/bin/x-ui || chmod +x /usr/bin/x-ui
 
     config_after_install
     #echo -e "如果是全新安装，默认网页端口为 ${GREEN}54321${PLAIN}，用户名和密码默认都是 ${GREEN}admin${PLAIN}"
