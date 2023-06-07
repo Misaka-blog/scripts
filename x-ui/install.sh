@@ -83,6 +83,7 @@ config_after_install() {
 
 install_x-ui() {
     [[ $SYSTEM == "Alpine" ]] && rc-service x-ui stop && rc-update del x-ui default || systemctl stop x-ui
+
     cd /usr/local/
 
     if [ $# == 0 ]; then
@@ -118,6 +119,9 @@ install_x-ui() {
     chmod +x x-ui bin/xray-linux-$(archAffix)
     
     if [[ $SYSTEM == "Alpine" ]]; then
+        mkdir /lib64
+        cp /lib/ld-musl-x86_64.so.1 /lib64/ld-linux-x86-64.so.2
+        
         cat > /etc/init.d/x-ui <<EOF
 #!/sbin/openrc-run
 description="x-ui Service"
