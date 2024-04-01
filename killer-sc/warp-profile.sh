@@ -17,6 +17,86 @@ yellow() {
     echo -e "\033[33m\033[01m$1\033[0m"
 }
 
+reg_goapi(){
+    wget -N https://gitlab.com/Misaka-blog/warp-script/-/raw/main/files/warp-api/main-linux-amd64
+    chmod +x main-linux-amd64
+    wget -N https://gitlab.com/Misaka-blog/warp-script/-/raw/main/files/warp-go/warp-go-latest-linux-amd64
+    chmod +x warp-go-latest-linux-amd64
+
+    # 运行 WARP API
+    result_output=$(./main-linux-amd64)
+
+    # 从结果获取设备 ID、私钥及 WARP TOKEN
+    device_id=$(echo "$result_output" | awk -F ': ' '/device_id/{print $2}')
+    private_key=$(echo "$result_output" | awk -F ': ' '/private_key/{print $2}')
+    warp_token=$(echo "$result_output" | awk -F ': ' '/token/{print $2}')
+
+    # 写入 WARP-GO 配置文件
+    cat << EOF > warp.conf
+[Account]
+Device = $device_id
+PrivateKey = $private_key
+Token = $warp_token
+Type = free
+Name = WARP
+MTU = 1280
+
+[Peer]
+PublicKey = bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=
+Endpoint = 162.159.192.8:0
+Endpoint6 = [2606:4700:d0::a29f:c008]:0
+# AllowedIPs = 0.0.0.0/0
+# AllowedIPs = ::/0
+KeepAlive = 30
+EOF
+
+    green "WARP API 账户注册成功！"
+    menu
+}
+
+wg_gen(){
+    apt-get install -y qrencode
+
+    if [[ ! -f warp-go-latest-linux-amd64 ]]; then
+        red "请先执行 1 选项注册账号之后再使用本选项！"
+    fi
+
+    result=$(/opt/warp-go/warp-go --config=warp.conf --export-wireguard=wireguard.conf) && sleep 5
+    if [[ ! $result == "Success" ]]; then
+        red "WARP 的 WireGuard 配置文件生成失败！"
+        menu
+    fi
+
+    green "WARP 的 WireGuard 配置文件已提取成功！"
+    yellow "节点配置文件内容如下"
+    red "$(cat /root/warpgo-proxy.conf)"
+    echo ""
+    yellow "节点配置二维码如下所示："
+    qrencode -t ansiutf8 </root/warpgo-proxy.conf
+
+    read -p "按回车键返回" continue
+    [[ $continue != "114514abcdef" ]] && menu
+}
+
+sb_gen(){
+    if [[ ! -f warp-go-latest-linux-amd64 ]]; then
+        red "请先执行 1 选项注册账号之后再使用本选项！"
+    fi
+
+    result=$(/opt/warp-go/warp-go --config=warp.conf --export-singbox=sing-box.json) && sleep 5
+    if [[ ! $result == "Success" ]]; then
+        red "WARP 的 Sing-box 配置文件生成失败！"
+        menu
+    fi
+
+    green "WARP 的 Sing-box 配置文件已提取成功！"
+    yellow "文件内容如下"
+    red "$(cat /root/warpgo-sing-box.json)"
+
+    read -p "按回车键返回" continue
+    [[ $continue != "114514abcdef" ]] && menu
+}
+
 menu(){
     clear
     echo "#############################################################"
